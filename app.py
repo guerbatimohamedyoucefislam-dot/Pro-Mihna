@@ -147,6 +147,25 @@ def auto_assign_hook():
         except Exception as e:
             print('Error in auto_assign:', e)
 
+@app.route('/admin/feedback/delete/<int:feedback_id>', methods=['POST'])
+@login_required
+def delete_feedback(feedback_id):
+    if session.get('user_role') != 'admin': return "Unauthorized", 401
+    query_db("DELETE FROM platform_feedback WHERE id = ?", [feedback_id])
+    flash('تم حذف الملاحظة بنجاح.', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=platform-feedbacks')
+
+@app.route('/admin/feedback/reply/<int:feedback_id>', methods=['POST'])
+@login_required
+def reply_feedback(feedback_id):
+    if session.get('user_role') != 'admin': return "Unauthorized", 401
+    reply_message = request.form.get('reply_message', '').strip()
+    feedback = query_db("SELECT customer_id FROM platform_feedback WHERE id = ?", [feedback_id], one=True)
+    if feedback and reply_message:
+        create_notification(feedback['customer_id'], 'رد من الإدارة على ملاحظتك', reply_message, '/customer_dashboard')
+        flash('تم إرسال الرد للزبون بنجاح.', 'success')
+    return redirect(url_for('admin_dashboard') + '?tab=platform-feedbacks')
+
 @app.route('/submit_feedback', methods=['POST'])
 @login_required
 def submit_feedback():
@@ -837,6 +856,26 @@ def create_vip_request():
         proof_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     
     db = get_db()
+    available_worker = query_db("""
+        SELECT wp.id
+        FROM worker_profiles wp
+        JOIN users u ON wp.user_id = u.id
+        WHERE wp.profession_id = ? 
+          AND u.location_id = ?
+          AND wp.is_vip_approved = TRUE 
+          AND wp.status = 'active'
+        LIMIT 1
+    """, [profession_id, location_id], one=True)
+    
+    if not available_worker:
+        db.execute('INSERT INTO vip_requests (customer_id, profession_id, problem_description, location_id, proof_file_path, status) VALUES (?, ?, ?, ?, ?, ?)',
+                   [session['user_id'], profession_id, problem_description, location_id, filename, 'cancelled'])
+        db.commit()
+        apology_msg = 'نعتذر منك عميلنا العزيز، خدماتنا تشهد إقبالاً كبيراً في منطقتك حالياً ولا يوجد عامل VIP متاح فوراً. يمكنك حجز موعد عادي أو المحاولة لاحقاً.'
+        create_notification(session['user_id'], 'اعتذار عن طلب VIP', apology_msg, '/customer_dashboard')
+        flash('نعتذر، لا يتوفر عمال VIP في منطقتك حالياً لطلبك.', 'danger')
+        return redirect(url_for('customer_dashboard'))
+
     db.execute('INSERT INTO vip_requests (customer_id, profession_id, problem_description, location_id, proof_file_path) VALUES (?, ?, ?, ?, ?)',
                [session['user_id'], profession_id, problem_description, location_id, filename])
     admin = query_db("SELECT id FROM users WHERE role='admin' LIMIT 1", one=True)

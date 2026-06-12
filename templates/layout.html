@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -61,16 +63,28 @@
         </div>
     </nav>
 
-    <div class="container">
+    <main class="container" style="margin-top: 2rem;">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            {% for category, message in messages %}
-              <div class="flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                {% for category, message in messages %}
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: '{{ "success" if category == "success" else ("error" if category == "danger" else "info") }}',
+                        title: '{{ message }}',
+                        showConfirmButton: false,
+                        timer: 4000,
+                        timerProgressBar: true
+                    });
+                {% endfor %}
+                });
+            </script>
           {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
-    </div>
+    </main>
     
     <script>
         const themeToggleBtn = document.getElementById('theme-toggle');

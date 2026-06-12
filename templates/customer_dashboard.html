@@ -68,7 +68,12 @@
             {% for r in vip_requests %}
             <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
                 <strong>{{ t('profession') }}:</strong> {{ r.profession_name }} | <strong>{{ t('location') }}:</strong> {{ r.location_name }}<br>
-                <strong>{{ t('status') }}:</strong> <span class="badge {{ 'badge-vip' if r.status == 'assigned' else 'badge-standard' }}">{{ r.status }}</span><br>
+                <!-- Status Tracker -->
+                <div class="status-tracker">
+                    <div class="step active"><div class="dot"></div><div class="label">مُرسل</div></div>
+                    <div class="step {{ 'active' if r.status in ['assigned', 'accepted', 'completed'] else '' }}"><div class="dot"></div><div class="label">قيد المعالجة</div></div>
+                    <div class="step {{ 'active' if r.status == 'completed' else '' }}"><div class="dot"></div><div class="label">مكتمل</div></div>
+                </div>
                 {% if r.assigned_worker_name %}
                     <strong>{{ t('assigned_worker') }}:</strong> {{ r.assigned_worker_name }} <span dir="ltr" style="color: var(--primary); font-weight: bold;">({{ r.worker_phone }})</span>
                     {% if r.conversation_id %}<a href="{{ url_for('chat', conversation_id=r.conversation_id) }}" class="btn btn-outline btn-sm">{{ t('open_chat') }}</a>{% endif %}
@@ -85,7 +90,12 @@
             <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
                 <strong>{{ t('worker_name') }}:</strong> {{ r.worker_name }} ({{ r.profession_name }})<br>
                 <strong>{{ t('description') }}:</strong> {{ r.description }}<br>
-                <strong>{{ t('status') }}:</strong> <span class="badge {{ 'badge-success' if r.status == 'accepted' else 'badge-standard' }}">{{ r.status }}</span><br>
+                <!-- Status Tracker -->
+                <div class="status-tracker">
+                    <div class="step active"><div class="dot"></div><div class="label">مُرسل</div></div>
+                    <div class="step {{ 'active' if r.status in ['assigned', 'accepted', 'completed'] else '' }}"><div class="dot"></div><div class="label">قيد المعالجة</div></div>
+                    <div class="step {{ 'active' if r.status == 'completed' else '' }}"><div class="dot"></div><div class="label">مكتمل</div></div>
+                </div>
                 {% if r.status == 'accepted' %}
                     <strong>{{ t('worker_phone') }}:</strong> <span dir="ltr" style="color: var(--primary); font-weight: bold;">{{ r.worker_phone }}</span>
                 {% endif %}

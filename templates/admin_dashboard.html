@@ -188,6 +188,7 @@
                             <th>العنوان</th>
                             <th>الملاحظة</th>
                             <th>التاريخ</th>
+                            <th>إجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -197,9 +198,24 @@
                             <td><span class="badge badge-info">{{ f.subject }}</span></td>
                             <td style="max-width: 300px; white-space: normal;">{{ f.message }}</td>
                             <td dir="ltr">{{ f.created_at }}</td>
+                            <td style="display: flex; gap: 0.5rem; justify-content: center;">
+                                <button onclick="document.getElementById('reply-form-{{ f.id }}').style.display = 'block'" class="btn btn-outline btn-sm" title="الرد"><i class="fas fa-reply"></i></button>
+                                <form action="{{ url_for('delete_feedback', feedback_id=f.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="حذف" onclick="return confirm('هل أنت متأكد من حذف هذه الملاحظة؟')"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr id="reply-form-{{ f.id }}" style="display: none; background: rgba(0,0,0,0.02);">
+                            <td colspan="5" style="padding: 1rem;">
+                                <form action="{{ url_for('reply_feedback', feedback_id=f.id) }}" method="POST" style="display: flex; gap: 1rem; align-items: center;">
+                                    <input type="text" name="reply_message" class="form-control" placeholder="اكتب ردك للزبون هنا ليصله كإشعار..." required style="flex-grow: 1; padding: 0.5rem; border-radius: 8px;">
+                                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i> إرسال الرد</button>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('reply-form-{{ f.id }}').style.display = 'none'">إلغاء</button>
+                                </form>
+                            </td>
                         </tr>
                     {% else %}
-                        <tr><td colspan="4" style="text-align:center; padding: 2rem;">لا توجد ملاحظات أو شكاوى واردة حالياً.</td></tr>
+                        <tr><td colspan="5" style="text-align:center; padding: 2rem;">لا توجد ملاحظات أو شكاوى واردة حالياً.</td></tr>
                     {% endfor %}
                     </tbody>
                 </table>
