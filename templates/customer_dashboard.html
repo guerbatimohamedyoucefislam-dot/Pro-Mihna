@@ -15,6 +15,45 @@
     </a>
 </div>
 
+<!-- Top Workers Section -->
+<div class="glass" style="padding: 1.5rem; margin-bottom: 2rem;">
+    <h2 style="color: var(--primary); display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+        <span>🏆</span> أفضل العمال (تحديث دوري)
+    </h2>
+    
+    <h3 style="margin-top: 1rem; color: var(--secondary); font-size: 1.1rem;">🛠️ المهن التقليدية</h3>
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        {% for w in top_manual %}
+        <div class="card" style="padding: 1rem; background: var(--bg-color); border: 1px solid var(--border);">
+            <h4 style="margin: 0; color: var(--primary);">{{ w.name }}</h4>
+            <p style="margin: 0.2rem 0; font-size: 0.9rem;">{{ w.profession_name if current_lang == 'ar' else (w.profession_name_fr if current_lang == 'fr' else w.profession_name_en) }}</p>
+            <p style="margin: 0.2rem 0; font-size: 0.9rem; color: #f59e0b;">
+                ⭐ {{ w.rating }} ({{ w.review_count }})
+            </p>
+            <a href="{{ url_for('worker_public_profile', worker_profile_id=w.worker_profile_id) }}" class="btn btn-outline btn-sm" style="width: 100%; margin-top: 0.5rem;">عرض وحجز</a>
+        </div>
+        {% else %}
+        <p>لا يوجد تقييمات كافية بعد.</p>
+        {% endfor %}
+    </div>
+
+    <h3 style="margin-top: 1rem; color: var(--secondary); font-size: 1.1rem;">💻 المهن الرقمية</h3>
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+        {% for w in top_digital %}
+        <div class="card" style="padding: 1rem; background: var(--bg-color); border: 1px solid var(--border);">
+            <h4 style="margin: 0; color: var(--primary);">{{ w.name }}</h4>
+            <p style="margin: 0.2rem 0; font-size: 0.9rem;">{{ w.profession_name if current_lang == 'ar' else (w.profession_name_fr if current_lang == 'fr' else w.profession_name_en) }}</p>
+            <p style="margin: 0.2rem 0; font-size: 0.9rem; color: #f59e0b;">
+                ⭐ {{ w.rating }} ({{ w.review_count }})
+            </p>
+            <a href="{{ url_for('worker_public_profile', worker_profile_id=w.worker_profile_id) }}" class="btn btn-outline btn-sm" style="width: 100%; margin-top: 0.5rem;">عرض وحجز</a>
+        </div>
+        {% else %}
+        <p>لا يوجد تقييمات كافية بعد.</p>
+        {% endfor %}
+    </div>
+</div>
+
 <div class="tabs-container">
     <div class="tabs-header">
         <button class="tab-btn active" onclick="openTab(event, 'my-vip')">{{ t('my_vip_requests') if t else 'طلباتي VIP' }}</button>

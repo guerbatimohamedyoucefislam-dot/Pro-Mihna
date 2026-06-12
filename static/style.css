@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@400;600;700&display=swap');
 
 :root {
-    --primary: #4F46E5;
-    --primary-hover: #4338CA;
-    --primary-light: rgba(79, 70, 229, 0.1);
-    --secondary: #10B981;
-    --secondary-hover: #059669;
+    --primary: #1E40AF; /* Professional Blue */
+    --primary-hover: #1E3A8A;
+    --primary-light: rgba(30, 64, 175, 0.1);
+    --secondary: #06B6D4; /* Trust Teal/Cyan */
+    --secondary-hover: #0891B2;
     --accent: #F59E0B;
     --danger: #EF4444;
     --background: #F8FAFC;
@@ -20,13 +20,30 @@
     --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
 }
 
+:root.dark {
+    --primary: #3B82F6; /* Lighter Blue for contrast */
+    --primary-hover: #60A5FA;
+    --primary-light: rgba(59, 130, 246, 0.15);
+    --secondary: #22D3EE;
+    --secondary-hover: #67E8F9;
+    --background: #0F172A; /* Dark Navy Background */
+    --surface: #1E293B; /* Slightly lighter surface */
+    --text-main: #F8FAFC;
+    --text-muted: #94A3B8;
+    --border: #334155;
+    --glass-bg: rgba(30, 41, 59, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.3);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
     font-family: 'Cairo', 'Inter', sans-serif;
     background: var(--background);
-    background-image: radial-gradient(circle at 10% 20%, rgba(79,70,229,0.04) 0%, transparent 20%),
-                      radial-gradient(circle at 90% 80%, rgba(16,185,129,0.04) 0%, transparent 20%);
+    background-image: radial-gradient(circle at 10% 20%, var(--primary-light) 0%, transparent 20%),
+                      radial-gradient(circle at 90% 80%, rgba(6,182,212,0.05) 0%, transparent 20%);
     color: var(--text-main);
     line-height: 1.6;
     min-height: 100vh;

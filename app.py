@@ -212,7 +212,7 @@ def search_workers():
         query += ' AND (u.name LIKE ? OR wp.bio LIKE ? OR p.name LIKE ? OR p.name_fr LIKE ? OR p.name_en LIKE ?)'
         like = f'%{text_search}%'
         params.extend([like, like, like, like, like])
-    query += ' ORDER BY wp.rating DESC'
+    query += ' ORDER BY wp.rating DESC, wp.review_count DESC'
     workers = query_db(query, params)
     return render_template('search.html', workers=workers, professions=professions, locations=locations)
 
@@ -298,18 +298,33 @@ def customer_dashboard():
         ORDER BY vr.created_at DESC
     ''', [session['user_id']])
     
-    my_bookings = query_db('''
+    bookings = query_db('''
         SELECT b.*, u.name as worker_name, p.name as profession_name
         FROM bookings b
         JOIN worker_profiles wp ON b.worker_profile_id = wp.id
         JOIN users u ON wp.user_id = u.id
         JOIN professions p ON wp.profession_id = p.id
         WHERE b.customer_id = ?
-        ORDER BY b.booking_date DESC
+        ORDER BY b.booking_date DESC, b.time_slot DESC
     ''', [session['user_id']])
-    
-    return render_template('customer_dashboard.html', professions=professions, locations=locations,
-                           std_requests=std_requests, vip_requests=vip_reqs, bookings=my_bookings)
+
+    top_manual = query_db('''
+        SELECT wp.id as worker_profile_id, u.name, p.name as profession_name, p.name_fr as profession_name_fr, p.name_en as profession_name_en, wp.rating, wp.review_count 
+        FROM worker_profiles wp JOIN users u ON wp.user_id = u.id JOIN professions p ON wp.profession_id = p.id
+        WHERE p.category = 'manual' AND wp.status = 'active'
+        ORDER BY wp.rating DESC, wp.review_count DESC LIMIT 3
+    ''')
+
+    top_digital = query_db('''
+        SELECT wp.id as worker_profile_id, u.name, p.name as profession_name, p.name_fr as profession_name_fr, p.name_en as profession_name_en, wp.rating, wp.review_count 
+        FROM worker_profiles wp JOIN users u ON wp.user_id = u.id JOIN professions p ON wp.profession_id = p.id
+        WHERE p.category = 'digital' AND wp.status = 'active'
+        ORDER BY wp.rating DESC, wp.review_count DESC LIMIT 3
+    ''')
+
+    return render_template('customer_dashboard.html', 
+                           std_requests=std_requests, vip_requests=vip_reqs, bookings=bookings,
+                           professions=professions, locations=locations, top_manual=top_manual, top_digital=top_digital)
 
 # ========================= WORKER DASHBOARD =========================
 @app.route('/worker')
@@ -771,12 +786,12 @@ def assign_vip_worker(req_id):
     db.execute("UPDATE vip_requests SET assigned_worker_id = ?, status = 'assigned' WHERE id = ?", [worker_id, req_id])
     
     vr = query_db('SELECT customer_id FROM vip_requests WHERE id = ?', [req_id], one=True)
-    wu = query_db('SELECT user_id FROM worker_profiles WHERE id = ?', [worker_id], one=True)
+    wu = query_db('SELECT wp.user_id, u.name as worker_name, u.phone as worker_phone FROM worker_profiles wp JOIN users u ON wp.user_id = u.id WHERE wp.id = ?', [worker_id], one=True)
     if vr and wu:
         db.execute('INSERT INTO conversations (customer_id, worker_id, vip_request_id) VALUES (?, ?, ?)',
                    [vr['customer_id'], wu['user_id'], req_id])
-        create_notification(vr['customer_id'], 'تم التعيين', 'تم تعيين عامل لطلبك VIP', '/customer')
-        create_notification(wu['user_id'], 'مهمة VIP جديدة', 'تم إسناد مهمة VIP جديدة لك', '/worker')
+        create_notification(vr['customer_id'], '⭐ عامل VIP', f'تم تعيين العامل {wu["worker_name"]} لطلبك VIP. هاتف: {wu["worker_phone"]}', '/customer')
+        create_notification(wu['user_id'], '⭐ طلب VIP جديد', 'تم تعيينك لطلب VIP جديد، تواصل مع الزبون', '/worker')
     db.commit()
     flash('تم تعيين العامل بنجاح', 'success')
     return redirect(url_for('admin_dashboard'))
