@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block content %}
+<a href="{{ url_for('search_workers') }}" class="btn btn-outline btn-sm" style="margin-bottom: 1rem;">{{ t('back') }}</a>
+
+<div class="card glass" style="max-width: 600px; margin: 0 auto;">
+    <h2>{{ t('booking_title') }} — {{ w.name }}</h2>
+    <p style="color: var(--primary); font-weight: 600;">{{ w.profession_name }}</p>
+
+    {% if availability %}
+    <div style="margin-bottom: 1.5rem;">
+        <h3>{{ t('my_availability') }}</h3>
+        {% set days_list = t('days') %}
+        <div class="avail-grid">
+            {% for a in availability %}
+            <div class="avail-chip">{{ days_list[a.day_of_week] }} {{ a.start_time }}-{{ a.end_time }}</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <form action="{{ url_for('book_worker', worker_profile_id=w.id) }}" method="POST">
+        <div class="form-group">
+            <label>{{ t('select_date') }}:</label>
+            <input type="date" name="booking_date" required min="{{ '%Y-%m-%d' | format }}">
+        </div>
+        <div class="form-group">
+            <label>{{ t('select_time') }}:</label>
+            <select name="time_slot" required>
+                {% for a in availability %}
+                <option value="{{ a.start_time }}-{{ a.end_time }}">{{ days_list[a.day_of_week] }}: {{ a.start_time }} - {{ a.end_time }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('booking_desc') }}:</label>
+            <textarea name="description" rows="3" placeholder="{{ t('request_placeholder') }}"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">{{ t('confirm_booking') }}</button>
+    </form>
+    {% else %}
+    <p>{{ t('no_availability') }}</p>
+    {% endif %}
+</div>
+{% endblock %}

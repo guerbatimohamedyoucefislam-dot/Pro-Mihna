@@ -1,0 +1,208 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>{{ t('welcome') }} {{ session.get('user_name') }}</h1>
+
+<div class="tabs-container">
+    <div class="tabs-header">
+        <button class="tab-btn active" onclick="openTab(event, 'stats')">{{ t('stats_reports') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'pending-workers')">{{ t('verify_workers') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'vip-clients')">{{ t('vip_client_requests') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'vip-workers')">{{ t('vip_worker_requests') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'all-users')">قائمة المسجلين</button>
+    </div>
+
+    <!-- All Users -->
+    <div id="all-users" class="tab-content">
+        <div class="card glass">
+            <h2>قائمة العمال (Workers)</h2>
+            <div class="table-responsive" style="margin-bottom: 2rem;"><table>
+                <thead><tr><th>الاسم</th><th>المهنة</th><th>الموقع</th><th>الهاتف</th><th>التقييم</th><th>الحالة</th></tr></thead>
+                <tbody>
+                {% for w in all_workers %}
+                <tr>
+                    <td><strong>{{ w.name }}</strong><br>{{ w.email }}</td>
+                    <td>{{ w.profession_name }}</td>
+                    <td>{{ w.location_name }}</td>
+                    <td dir="ltr">{{ w.phone }}</td>
+                    <td>⭐ {{ w.rating }}</td>
+                    <td><span class="badge {{ 'badge-success' if w.status == 'active' else 'badge-standard' }}">{{ w.status }}</span></td>
+                </tr>
+                {% else %}<tr><td colspan="6" style="text-align:center;">لا يوجد عمال</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+
+            <h2>قائمة الزبائن (Customers)</h2>
+            <div class="table-responsive"><table>
+                <thead><tr><th>الاسم</th><th>البريد الإلكتروني</th><th>الموقع</th><th>الهاتف</th></tr></thead>
+                <tbody>
+                {% for c in all_customers %}
+                <tr>
+                    <td><strong>{{ c.name }}</strong></td>
+                    <td>{{ c.email }}</td>
+                    <td>{{ c.location_name }}</td>
+                    <td dir="ltr">{{ c.phone }}</td>
+                </tr>
+                {% else %}<tr><td colspan="4" style="text-align:center;">لا يوجد زبائن</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div id="stats" class="tab-content active">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+            <a href="{{ url_for('admin_report') }}" class="btn btn-primary" target="_blank">📄 استخراج التقرير الشهري (PDF)</a>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 2rem;">
+            <div class="stat-card glass primary"><h3>{{ t('total_users') }}</h3><div class="stat-value">{{ stats.users }}</div></div>
+            <div class="stat-card glass secondary"><h3>{{ t('total_workers') }}</h3><div class="stat-value">{{ stats.workers }}</div></div>
+            <div class="stat-card glass accent"><h3>{{ t('total_vip_reqs') }}</h3><div class="stat-value">{{ stats.vip }}</div></div>
+            <div class="stat-card glass muted"><h3>{{ t('total_std_reqs') }}</h3><div class="stat-value">{{ stats.std }}</div></div>
+            <div class="stat-card glass primary"><h3>{{ t('total_bookings') }}</h3><div class="stat-value">{{ stats.bookings }}</div></div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid" style="margin-bottom: 2rem;">
+            <div class="card glass">
+                <h3>{{ t('requests_chart') }}</h3>
+                <div class="chart-container"><canvas id="trendChart"></canvas></div>
+            </div>
+            <div class="card glass">
+                <h3>{{ t('professions_chart') }}</h3>
+                <div class="chart-container"><canvas id="profChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card glass">
+            <h2>{{ t('monthly_performance') }}</h2>
+            <div class="table-responsive"><table>
+                <thead><tr><th>{{ t('worker_name') }}</th><th>{{ t('month') }}</th><th>{{ t('assigned_requests') }}</th></tr></thead>
+                <tbody>
+                {% for s in monthly_stats %}<tr><td>{{ s.worker_name }}</td><td dir="ltr">{{ s.month }}</td><td><span class="badge badge-vip">{{ s.count }}</span></td></tr>
+                {% else %}<tr><td colspan="3" style="text-align:center;">{{ t('no_monthly_stats') }}</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div>
+    </div>
+
+    <!-- Pending Workers -->
+    <div id="pending-workers" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('review_new_workers') }}</h2>
+            <p>{{ t('worker_hidden_until_approved') }}</p>
+            <div class="table-responsive" style="margin-top: 1rem;"><table>
+                <thead><tr><th>{{ t('worker_name') }}</th><th>{{ t('profession') }} / {{ t('location') }}</th><th>{{ t('bio') }} / {{ t('proof_file') }}</th><th>{{ t('actions') }}</th></tr></thead>
+                <tbody>
+                {% for wp in pending_workers %}
+                <tr>
+                    <td><strong>{{ wp.name }}</strong><br><span dir="ltr">{{ wp.phone }}</span><br>{{ wp.email }}</td>
+                    <td><strong>{{ wp.profession_name }}</strong><br>{{ wp.location_name }}</td>
+                    <td style="max-width: 250px; font-size: 0.9rem;">{{ wp.bio or '-' }}<br>
+                        {% if wp.proof_file_path %}<a href="{{ url_for('static', filename='uploads/' + wp.proof_file_path) }}" target="_blank" class="badge badge-info">{{ t('proof_file_view') }}</a>{% else %}<span style="color: var(--text-muted);">{{ t('no_proof') }}</span>{% endif %}
+                    </td>
+                    <td>
+                        <form action="{{ url_for('verify_worker', profile_id=wp.profile_id) }}" method="POST" style="display: flex; gap: 0.5rem;">
+                            <button type="submit" name="action" value="approve" class="btn btn-secondary btn-sm">{{ t('activate') }}</button>
+                            <button type="submit" name="action" value="reject" class="btn btn-outline btn-sm">{{ t('reject') }}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}<tr><td colspan="4" style="text-align:center;">{{ t('no_pending_workers') }}</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div>
+    </div>
+
+    <!-- VIP Client Requests -->
+    <div id="vip-clients" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('assign_vip') }}</h2>
+            {% for r in vip_requests %}
+            <div style="border-bottom: 1px solid var(--border); padding: 1rem 0; display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <strong>{{ r.customer_name }}</strong> — <span style="color: var(--primary);">{{ r.profession_name }}</span><br>
+                    {{ t('location') }}: {{ r.location_name }} | {{ r.problem_description }}<br>
+                    {% if r.proof_file_path %}<a href="{{ url_for('static', filename='uploads/' + r.proof_file_path) }}" target="_blank" style="color: var(--secondary);">{{ t('proof_file_view') }}</a>{% endif %}
+                </div>
+                <div style="min-width: 250px;">
+                    <span class="badge {{ 'badge-vip' if r.status == 'assigned' else 'badge-standard' }}">{{ r.status }}</span>
+                    {% if r.status in ('pending', 'processing') %}
+                        <form action="{{ url_for('assign_vip_worker', req_id=r.id) }}" method="POST" style="margin-top: 0.5rem;">
+                            <select name="worker_id" required style="margin-bottom: 0.5rem; width: 100%;">
+                                <option value="">{{ t('select_worker') }}</option>
+                                {% for w in vip_workers if w.profession_name == r.profession_name %}<option value="{{ w.id }}">{{ w.name }} ({{ w.location_name }})</option>{% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">{{ t('assign_worker') }}</button>
+                        </form>
+                    {% else %}<br><strong>{{ t('assigned_worker') }}:</strong> {{ r.assigned_worker_name }}{% endif %}
+                </div>
+            </div>
+            {% else %}<p>{{ t('no_vip_client_reqs') }}</p>{% endfor %}
+        </div>
+    </div>
+
+    <!-- VIP Worker Apps -->
+    <div id="vip-workers" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('review_vip_apps') }}</h2>
+            <div class="table-responsive"><table>
+                <thead><tr><th>{{ t('worker_name') }}</th><th>{{ t('profession') }}</th><th>{{ t('date') }}</th><th>{{ t('status') }}</th><th>{{ t('actions') }}</th></tr></thead>
+                <tbody>
+                {% for app in vip_applications %}
+                <tr>
+                    <td>{{ app.worker_name }}</td><td>{{ app.profession_name }}</td>
+                    <td dir="ltr">{{ app.applied_at[:10] }}</td>
+                    <td><span class="badge {{ 'badge-vip' if app.status == 'approved' else 'badge-standard' }}">{{ app.status }}</span></td>
+                    <td>{% if app.status == 'pending' %}
+                        <form action="{{ url_for('process_vip_app', app_id=app.id) }}" method="POST" style="display: flex; gap: 0.5rem;">
+                            <input type="text" name="admin_notes" placeholder="{{ t('notes_placeholder') }}" style="flex: 1;">
+                            <button type="submit" name="status" value="approved" class="btn btn-secondary btn-sm">{{ t('approve') }}</button>
+                            <button type="submit" name="status" value="rejected" class="btn btn-outline btn-sm">{{ t('reject') }}</button>
+                        </form>{% else %}{{ app.admin_notes or '-' }}{% endif %}</td>
+                </tr>
+                {% else %}<tr><td colspan="5" style="text-align:center;">{{ t('no_vip_apps') }}</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openTab(evt, tabName) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    evt.currentTarget.classList.add('active');
+}
+
+// Charts
+document.addEventListener('DOMContentLoaded', function() {
+    var chartData = {{ chart_data|safe }};
+    
+    // Trend Chart
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: chartData.months.length > 0 ? chartData.months : chartData.std_months,
+            datasets: [
+                { label: 'VIP', data: chartData.vip_counts, borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4 },
+                { label: 'Standard', data: chartData.std_counts, borderColor: '#4F46E5', backgroundColor: 'rgba(79,70,229,0.1)', fill: true, tension: 0.4 }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
+    });
+    
+    // Profession Chart
+    if (chartData.prof_names.length > 0) {
+        new Chart(document.getElementById('profChart'), {
+            type: 'doughnut',
+            data: {
+                labels: chartData.prof_names,
+                datasets: [{ data: chartData.prof_counts, backgroundColor: ['#4F46E5','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4'] }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+});
+</script>
+{% endblock %}

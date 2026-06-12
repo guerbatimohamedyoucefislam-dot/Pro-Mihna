@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}" dir="{{ 'rtl' if current_lang == 'ar' else 'ltr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Pro Mihna - {{ t('site_slogan') }}">
+    <title>Pro Mihna - {{ t('site_slogan') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body dir="{{ 'rtl' if current_lang == 'ar' else 'ltr' }}">
+    <nav class="navbar glass">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="logo"><img src="{{ url_for('static', filename='logo.png') }}" alt="Pro Mihna" style="height: 40px; vertical-align: middle; margin-inline-end: 8px;">Pro Mihna</a>
+            <div class="nav-links">
+                <div class="lang-switcher">
+                    <a href="{{ url_for('set_lang', lang='ar') }}" class="lang-btn {{ 'active' if current_lang == 'ar' }}">عربي</a>
+                    <a href="{{ url_for('set_lang', lang='fr') }}" class="lang-btn {{ 'active' if current_lang == 'fr' }}">FR</a>
+                    <a href="{{ url_for('set_lang', lang='en') }}" class="lang-btn {{ 'active' if current_lang == 'en' }}">EN</a>
+                </div>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('search_workers') }}">{{ t('search') }}</a>
+                    <a href="{{ url_for('view_notifications') }}" class="notif-bell">
+                        🔔{% if notif_count > 0 %}<span class="notif-badge">{{ notif_count }}</span>{% endif %}
+                    </a>
+                    {% if session.get('user_role') == 'customer' %}
+                        <a href="{{ url_for('customer_dashboard') }}">{{ t('customer_dashboard') }}</a>
+                    {% elif session.get('user_role') == 'worker' %}
+                        <a href="{{ url_for('worker_dashboard') }}">{{ t('worker_dashboard') }}</a>
+                    {% elif session.get('user_role') == 'admin' %}
+                        <a href="{{ url_for('admin_dashboard') }}">{{ t('admin_dashboard') }}</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">{{ t('logout') }}</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">{{ t('login') }}</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline btn-sm">{{ t('register') }}</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,113 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>{{ t('welcome') }} {{ session.get('user_name') }}</h1>
+<a href="{{ url_for('search_workers') }}" class="btn btn-secondary" style="margin-bottom: 1.5rem; display: inline-block;">{{ t('hero_cta_search') }}</a>
+
+<div class="tabs-container">
+    <div class="tabs-header">
+        <button class="tab-btn active" onclick="openTab(event, 'create-vip')">{{ t('create_vip_request') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'my-vip')">{{ t('my_vip_requests') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'my-std')">{{ t('my_std_requests') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'my-bookings')">{{ t('my_bookings') }}</button>
+    </div>
+
+    <div id="create-vip" class="tab-content active">
+        <div class="card glass" style="border: 2px solid var(--primary);">
+            <h2 style="color: var(--primary);">{{ t('vip_form_title') }}</h2>
+            <p>{{ t('vip_form_subtitle') }}</p>
+            <form action="{{ url_for('create_vip_request') }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group"><label>{{ t('required_profession') }}:</label>
+                    <select name="profession_id" required>{% for p in professions %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label>{{ t('your_location') }}:</label>
+                    <select name="location_id" required>{% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label>{{ t('problem_description') }}:</label><textarea name="problem_description" rows="3" required></textarea></div>
+                <div class="form-group"><label>{{ t('proof_location_file') }}:</label><input type="file" name="proof_file"></div>
+                <button type="submit" class="btn btn-primary">{{ t('send_vip_request') }}</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="my-vip" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('my_vip_requests') }}</h2>
+            {% for r in vip_requests %}
+            <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                <strong>{{ t('profession') }}:</strong> {{ r.profession_name }} | <strong>{{ t('location') }}:</strong> {{ r.location_name }}<br>
+                <strong>{{ t('status') }}:</strong> <span class="badge {{ 'badge-vip' if r.status == 'assigned' else 'badge-standard' }}">{{ r.status }}</span><br>
+                {% if r.assigned_worker_name %}
+                    <strong>{{ t('assigned_worker') }}:</strong> {{ r.assigned_worker_name }} <span dir="ltr" style="color: var(--primary); font-weight: bold;">({{ r.worker_phone }})</span>
+                    {% if r.conversation_id %}<a href="{{ url_for('chat', conversation_id=r.conversation_id) }}" class="btn btn-outline btn-sm">{{ t('open_chat') }}</a>{% endif %}
+                {% endif %}
+            </div>
+            {% else %}<p>{{ t('no_vip_requests') }}</p>{% endfor %}
+        </div>
+    </div>
+
+    <div id="my-std" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('my_std_requests') }}</h2>
+            {% for r in std_requests %}
+            <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                <strong>{{ t('worker_name') }}:</strong> {{ r.worker_name }} ({{ r.profession_name }})<br>
+                <strong>{{ t('description') }}:</strong> {{ r.description }}<br>
+                <strong>{{ t('status') }}:</strong> <span class="badge {{ 'badge-success' if r.status == 'accepted' else 'badge-standard' }}">{{ r.status }}</span><br>
+                {% if r.status == 'accepted' %}
+                    <strong>{{ t('worker_phone') }}:</strong> <span dir="ltr" style="color: var(--primary); font-weight: bold;">{{ r.worker_phone }}</span>
+                {% endif %}
+                {% if r.conversation_id %}<a href="{{ url_for('chat', conversation_id=r.conversation_id) }}" class="btn btn-outline btn-sm">{{ t('open_chat') }}</a>{% endif %}
+                
+                {% if r.status == 'accepted' %}
+                    {% if r.worker_confirmed %}
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #FEF3C7; color: #92400E; border-radius: 8px;">
+                            <strong>⚠️ العامل يخبرك بأنه أتم العمل!</strong>
+                            <form action="{{ url_for('confirm_completion', req_id=r.id) }}" method="POST" style="margin-top: 0.5rem;">
+                                <button type="submit" class="btn btn-primary btn-sm">تأكيد الإنجاز من طرفي</button>
+                            </form>
+                        </div>
+                    {% elif not r.customer_confirmed %}
+                        <form action="{{ url_for('confirm_completion', req_id=r.id) }}" method="POST" style="margin-top: 0.5rem;">
+                            <button type="submit" class="btn btn-outline btn-sm">تأكيد الإنجاز (قبل العامل)</button>
+                        </form>
+                    {% else %}
+                        <div style="margin-top: 0.5rem; color: var(--secondary); font-size: 0.9rem;">أنت أكدت الإنجاز، في انتظار تأكيد العامل.</div>
+                    {% endif %}
+                {% endif %}
+
+                {% if r.status == 'completed' %}
+                    <div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--primary-light); border-radius: 8px;">
+                        <strong>{{ t('leave_review') }}:</strong>
+                        <form action="{{ url_for('leave_review', worker_profile_id=r.worker_id) }}" method="POST" style="display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap; margin-top: 0.5rem;">
+                            <select name="rating" style="width: 80px;"><option value="5">⭐5</option><option value="4">⭐4</option><option value="3">⭐3</option><option value="2">⭐2</option><option value="1">⭐1</option></select>
+                            <input type="text" name="comment" placeholder="{{ t('review_placeholder') }}" style="flex: 1;">
+                            <button type="submit" class="btn btn-secondary btn-sm">{{ t('send') }}</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+            {% else %}<p>{{ t('no_std_requests') }}</p>{% endfor %}
+        </div>
+    </div>
+
+    <div id="my-bookings" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('my_bookings') }}</h2>
+            {% for b in bookings %}
+            <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                <strong>{{ t('worker_name') }}:</strong> {{ b.worker_name }} ({{ b.profession_name }})<br>
+                <strong>{{ t('date') }}:</strong> {{ b.booking_date }} | <strong>{{ t('select_time') }}:</strong> {{ b.time_slot }}<br>
+                <strong>{{ t('status') }}:</strong> <span class="badge {{ 'badge-success' if b.status == 'confirmed' else 'badge-standard' }}">{{ b.status }}</span>
+            </div>
+            {% else %}<p>{{ t('no_bookings') }}</p>{% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function openTab(evt, tabName) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    evt.currentTarget.classList.add('active');
+}
+</script>
+{% endblock %}

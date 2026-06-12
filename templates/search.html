@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <h2>{{ t('search_title') }}</h2>
+    <p>{{ t('search_subtitle') }}</p>
+    <form action="{{ url_for('search_workers') }}" method="GET" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+            <input type="text" name="q" placeholder="{{ t('search_text_placeholder') }}" value="{{ request.args.get('q', '') }}">
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+            <select name="profession_id">
+                <option value="">{{ t('all_professions') }}</option>
+                <optgroup label="{{ 'المهن التقليدية' if current_lang == 'ar' else ('Métiers traditionnels' if current_lang == 'fr' else 'Traditional Professions') }}">
+                    {% for p in professions if p.category == 'manual' %}<option value="{{ p.id }}" {% if request.args.get('profession_id')|int == p.id %}selected{% endif %}>{{ p.name if current_lang == 'ar' else (p.name_fr if current_lang == 'fr' else p.name_en) }}</option>{% endfor %}
+                </optgroup>
+                <optgroup label="{{ 'المهن الرقمية' if current_lang == 'ar' else ('Métiers numériques' if current_lang == 'fr' else 'Digital Professions') }}">
+                    {% for p in professions if p.category == 'digital' %}<option value="{{ p.id }}" {% if request.args.get('profession_id')|int == p.id %}selected{% endif %}>{{ p.name if current_lang == 'ar' else (p.name_fr if current_lang == 'fr' else p.name_en) }}</option>{% endfor %}
+                </optgroup>
+            </select>
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+            <select name="location_id">
+                <option value="">{{ t('all_locations') }}</option>
+                {% for l in locations %}<option value="{{ l.id }}" {% if request.args.get('location_id')|int == l.id %}selected{% endif %}>{{ l.name if current_lang == 'ar' else (l.name_fr if current_lang == 'fr' else l.name_en) }}</option>{% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-secondary">{{ t('search') }}</button>
+    </form>
+</div>
+
+<!-- Map -->
+<div class="glass" style="padding: 1rem; margin-bottom: 1.5rem;">
+    <h3 style="margin-bottom: 0.5rem;">{{ t('map_view') }}</h3>
+    <div id="search-map"></div>
+</div>
+
+<div class="grid">
+    {% for w in workers %}
+    <div class="card glass">
+        <h3 style="color: var(--primary);">{{ w.name }}</h3>
+        <p><strong>{{ t('profession') }}:</strong> {{ w.profession_name if current_lang == 'ar' else (w.profession_name_fr if current_lang == 'fr' else w.profession_name_en) }}</p>
+        <p><strong>{{ t('location') }}:</strong> {{ w.location_name if current_lang == 'ar' else (w.location_name_fr if current_lang == 'fr' else w.location_name_en) }}</p>
+        <p><strong>{{ t('phone') }}:</strong> <span style="color: var(--secondary); font-weight: bold;" dir="ltr">{{ w.phone }}</span></p>
+        <p><strong>{{ t('rating') }}:</strong> <span class="stars">{% for i in range(5) %}<span class="star {{ 'filled' if i < w.rating|int }}">★</span>{% endfor %}</span> ({{ w.review_count }} {{ t('reviews') }})</p>
+        {% if w.bio %}<p style="font-size: 0.85rem; color: var(--text-muted);">{{ w.bio[:80] }}{% if w.bio|length > 80 %}...{% endif %}</p>{% endif %}
+        
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+            <a href="{{ url_for('worker_public_profile', worker_profile_id=w.worker_profile_id) }}" class="btn btn-outline btn-sm">{{ t('view_profile') }}</a>
+            <a href="{{ url_for('book_worker', worker_profile_id=w.worker_profile_id) }}" class="btn btn-secondary btn-sm">{{ t('book_appointment') }} 📅</a>
+        </div>
+        
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 1rem 0;">
+        <form action="{{ url_for('request_worker', worker_profile_id=w.worker_profile_id) }}" method="POST">
+            <div class="form-group" style="margin-bottom: 0.5rem;"><textarea name="description" rows="2" placeholder="{{ t('request_placeholder') }}" required></textarea></div>
+            <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">{{ t('send_request') }}</button>
+        </form>
+    </div>
+    {% else %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem;"><p>{{ t('no_workers_found') }}</p></div>
+    {% endfor %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var map = L.map('search-map').setView([32.49, 3.67], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OpenStreetMap'}).addTo(map);
+    
+    var workers = [
+        {% for w in workers %}
+        {name: "{{ w.name }}", lat: {{ w.latitude }}, lng: {{ w.longitude }}, prof: "{{ w.profession_name }}", rating: {{ w.rating }}, id: {{ w.worker_profile_id }} },
+        {% endfor %}
+    ];
+    
+    workers.forEach(function(w) {
+        var marker = L.marker([w.lat, w.lng]).addTo(map);
+        marker.bindPopup('<strong>' + w.name + '</strong><br>' + w.prof + '<br>⭐ ' + w.rating + '<br><a href="/profile/' + w.id + '">{{ t("view_profile") }}</a>');
+    });
+});
+</script>
+{% endblock %}

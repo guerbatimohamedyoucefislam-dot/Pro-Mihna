@@ -1,0 +1,169 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>{{ t('welcome') }} {{ session.get('user_name') }}</h1>
+
+<div class="tabs-container">
+    <div class="tabs-header">
+        <button class="tab-btn active" onclick="openTab(event, 'profile')">{{ t('profile_and_vip') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'stats')">{{ t('monthly_stats') }}</button>
+        {% if profile.is_vip_approved %}
+        <button class="tab-btn" onclick="openTab(event, 'vip-tasks')">{{ t('vip_tasks') }}</button>
+        {% endif %}
+        <button class="tab-btn" onclick="openTab(event, 'std-tasks')">{{ t('std_tasks') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'portfolio')">{{ t('my_portfolio') }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'availability')">{{ t('my_availability') }}</button>
+    </div>
+
+    <!-- Profile -->
+    <div id="profile" class="tab-content active">
+        <div class="card glass">
+            <h2>{{ t('your_profile') }}</h2>
+            <p><strong>{{ t('rating') }}:</strong> <span class="stars">{% for i in range(5) %}<span class="star {{ 'filled' if i < profile.rating|int }}">★</span>{% endfor %}</span> ({{ profile.review_count }})</p>
+            <p><strong>{{ t('vip_readiness') }}:</strong> 
+                {% if profile.is_ready_for_vip %}
+                    {% if profile.is_vip_approved %}<span class="badge badge-vip">{{ t('vip_approved') }}</span>{% else %}<span class="badge badge-standard">{{ t('vip_pending') }}</span>{% endif %}
+                {% else %}لا / No{% endif %}
+            </p>
+            <div style="padding: 1rem; background: rgba(0,0,0,0.02); border-radius: 8px; margin-top: 0.5rem;"><strong>{{ t('bio') }}:</strong><p>{{ profile.bio or '-' }}</p></div>
+            {% if not profile.is_ready_for_vip and not vip_app %}
+                <form action="{{ url_for('apply_vip') }}" method="POST" style="margin-top: 1rem;"><button type="submit" class="btn btn-secondary" style="width: 100%;">{{ t('apply_vip') }}</button></form>
+            {% elif vip_app and vip_app.status == 'pending' %}<p style="color: var(--text-muted); margin-top: 1rem;">{{ t('vip_app_pending') }}</p>{% endif %}
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div id="stats" class="tab-content">
+        <div class="card glass">
+            {% if profile.is_vip_approved %}
+            <h2>{{ t('monthly_stats') }} (VIP)</h2>
+            <table><thead><tr><th>{{ t('month') }}</th><th>{{ t('count') }}</th></tr></thead><tbody>
+            {% for s in vip_monthly %}<tr><td dir="ltr"><strong>{{ s.month }}</strong></td><td><span class="badge badge-vip">{{ s.count }}</span></td></tr>{% else %}<tr><td colspan="2" style="text-align:center;">{{ t('no_monthly_stats') }}</td></tr>{% endfor %}
+            </tbody></table>
+            <h2 style="margin-top: 1.5rem;">{{ t('monthly_stats') }} (Standard)</h2>
+            {% else %}
+            <h2>{{ t('monthly_stats') }}</h2>
+            {% endif %}
+            <table><thead><tr><th>{{ t('month') }}</th><th>{{ t('count') }}</th></tr></thead><tbody>
+            {% for s in std_monthly %}<tr><td dir="ltr"><strong>{{ s.month }}</strong></td><td><span class="badge badge-standard">{{ s.count }}</span></td></tr>{% else %}<tr><td colspan="2" style="text-align:center;">{{ t('no_monthly_stats') }}</td></tr>{% endfor %}
+            </tbody></table>
+        </div>
+    </div>
+
+    <!-- VIP Tasks -->
+    {% if profile.is_vip_approved %}
+    <div id="vip-tasks" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('assigned_to_you') }}</h2>
+            {% for r in vip_requests %}
+            <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                <strong>{{ t('customer_phone') }}:</strong> {{ r.customer_name }} <span dir="ltr" style="color: var(--primary); font-weight: bold;">({{ r.customer_phone }})</span><br>
+                <strong>{{ t('location') }}:</strong> {{ r.location_name }} | <strong>{{ t('description') }}:</strong> {{ r.problem_description }}<br>
+                <span class="badge badge-vip">{{ r.status }}</span>
+                {% if r.conversation_id %}<a href="{{ url_for('chat', conversation_id=r.conversation_id) }}" class="btn btn-outline btn-sm">{{ t('open_chat') }}</a>{% endif %}
+            </div>
+            {% else %}<p>{{ t('no_vip_tasks') }}</p>{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Standard Tasks -->
+    <div id="std-tasks" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('direct_requests') }}</h2>
+            {% for r in std_requests %}
+            <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                <strong>{{ t('customer_phone') }}:</strong> {{ r.customer_name }}<br>
+                <strong>{{ t('description') }}:</strong> {{ r.description }}<br>
+                <strong>{{ t('status') }}:</strong> <span class="badge {{ 'badge-success' if r.status == 'accepted' else 'badge-standard' }}">{{ r.status }}</span><br>
+                {% if r.status == 'pending' %}
+                    <form action="{{ url_for('update_std_request', req_id=r.id) }}" method="POST" style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                        <button type="submit" name="status" value="accepted" class="btn btn-secondary btn-sm">{{ t('accept') }}</button>
+                        <button type="submit" name="status" value="rejected" class="btn btn-outline btn-sm">{{ t('reject') }}</button>
+                    </form>
+                {% elif r.status == 'accepted' %}
+                    <strong>{{ t('customer_phone') }}:</strong> <span dir="ltr" style="color: var(--primary); font-weight: bold;">{{ r.customer_phone }}</span>
+                    {% if r.conversation_id %}<a href="{{ url_for('chat', conversation_id=r.conversation_id) }}" class="btn btn-outline btn-sm">{{ t('open_chat') }}</a>{% endif %}
+                    
+                    {% if r.customer_confirmed %}
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #FEF3C7; color: #92400E; border-radius: 8px;">
+                            <strong>⚠️ الزبون يخبرك بأنه أتم العمل!</strong>
+                            <form action="{{ url_for('update_std_request', req_id=r.id) }}" method="POST" style="margin-top: 0.5rem;">
+                                <button type="submit" name="status" value="worker_done" class="btn btn-primary btn-sm">تأكيد الإنجاز من طرفي</button>
+                            </form>
+                        </div>
+                    {% elif not r.worker_confirmed %}
+                        <form action="{{ url_for('update_std_request', req_id=r.id) }}" method="POST" style="margin-top: 0.5rem;">
+                            <button type="submit" name="status" value="worker_done" class="btn btn-outline btn-sm">تأكيد الإنجاز (قبل الزبون)</button>
+                        </form>
+                    {% else %}
+                        <div style="margin-top: 0.5rem; color: var(--secondary); font-size: 0.9rem;">أنت أكدت الإنجاز، في انتظار تأكيد الزبون.</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% else %}<p>{{ t('no_std_tasks') }}</p>{% endfor %}
+        </div>
+    </div>
+
+    <!-- Portfolio -->
+    <div id="portfolio" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('my_portfolio') }}</h2>
+            <form action="{{ url_for('upload_portfolio') }}" method="POST" enctype="multipart/form-data" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; align-items: end;">
+                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;"><input type="file" name="portfolio_image" accept="image/*" required></div>
+                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;"><input type="text" name="caption" placeholder="{{ t('caption_placeholder') }}"></div>
+                <button type="submit" class="btn btn-secondary btn-sm">{{ t('upload_btn') }}</button>
+            </form>
+            <div class="gallery">
+                {% for item in portfolio %}
+                <div class="gallery-item" onclick="openLightbox('{{ url_for('static', filename='uploads/' + item.image_path) }}')">
+                    <img src="{{ url_for('static', filename='uploads/' + item.image_path) }}" alt="{{ item.caption }}">
+                    {% if item.caption %}<div class="caption">{{ item.caption }}</div>{% endif %}
+                    <form action="{{ url_for('delete_portfolio', item_id=item.id) }}" method="POST" style="position:absolute;top:4px;right:4px;">
+                        <button type="submit" class="delete-btn" title="{{ t('delete') }}">✕</button>
+                    </form>
+                </div>
+                {% else %}<p>{{ t('no_portfolio') }}</p>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Availability -->
+    <div id="availability" class="tab-content">
+        <div class="card glass">
+            <h2>{{ t('set_availability') }}</h2>
+            <div class="avail-grid" style="margin-bottom: 1.5rem;">
+                {% set days = t('days') %}
+                {% for a in availability %}
+                <div class="avail-chip">
+                    {{ days[a.day_of_week] }} {{ a.start_time }}-{{ a.end_time }}
+                    <form action="{{ url_for('delete_availability', avail_id=a.id) }}" method="POST" style="display:inline;"><button type="submit" class="chip-delete">✕</button></form>
+                </div>
+                {% endfor %}
+            </div>
+            <form action="{{ url_for('set_availability') }}" method="POST" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: end;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>{{ t('day') }}</label>
+                    <select name="day_of_week" required>{% for i in range(7) %}<option value="{{ i }}">{{ days[i] }}</option>{% endfor %}</select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;"><label>{{ t('start_time') }}</label><input type="time" name="start_time" required></div>
+                <div class="form-group" style="margin-bottom: 0;"><label>{{ t('end_time') }}</label><input type="time" name="end_time" required></div>
+                <button type="submit" class="btn btn-secondary btn-sm">{{ t('add_slot') }}</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt=""></div>
+
+<script>
+function openTab(evt, tabName) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    evt.currentTarget.classList.add('active');
+}
+function openLightbox(src) { document.getElementById('lightbox').classList.add('active'); document.getElementById('lightbox-img').src = src; }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+</script>
+{% endblock %}

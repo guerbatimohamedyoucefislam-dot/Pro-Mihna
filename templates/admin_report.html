@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقرير الشهري - {{ month }}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background: #fff; color: #333; }
+        .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #4F46E5; padding-bottom: 20px; }
+        .header img { height: 80px; margin-bottom: 10px; }
+        h1 { color: #4F46E5; margin: 0; font-size: 28px; }
+        .date { font-size: 16px; color: #666; margin-top: 10px; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 40px; }
+        .stat-box { padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #4F46E5; margin-top: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: right; }
+        th { background: #4F46E5; color: white; }
+        tr:nth-child(even) { background: #f8fafc; }
+        
+        .footer { margin-top: 50px; font-size: 12px; color: #94a3b8; text-align: center; }
+        
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 20px; text-align: left;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #4F46E5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">طباعة كملف PDF</button>
+        <button onclick="window.close()" style="padding: 10px 20px; background: #e2e8f0; color: #333; border: none; border-radius: 6px; cursor: pointer; margin-right: 10px;">إغلاق</button>
+    </div>
+
+    <div class="header">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+        <h1>التقرير الشهري الشامل للأداء</h1>
+        <div class="date">لشهر: <span dir="ltr" style="font-weight: bold;">{{ month }}</span></div>
+    </div>
+
+    <h2 style="color: #333; margin-bottom: 15px;">الإحصائيات العامة</h2>
+    <div class="stats-grid">
+        <div class="stat-box">إجمالي الزبائن<div class="stat-value">{{ stats.users - stats.workers }}</div></div>
+        <div class="stat-box">إجمالي العمال<div class="stat-value">{{ stats.workers }}</div></div>
+        <div class="stat-box">طلبات Standard (هذا الشهر)<div class="stat-value">{{ stats.std_month }}</div></div>
+        <div class="stat-box">طلبات VIP (هذا الشهر)<div class="stat-value">{{ stats.vip_month }}</div></div>
+    </div>
+
+    <h2 style="color: #333; margin-bottom: 15px;">أداء العمال النشطين (هذا الشهر)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>العامل</th>
+                <th>المهنة</th>
+                <th>الطلبات المنجزة (Standard)</th>
+                <th>المهام المنجزة (VIP)</th>
+                <th>متوسط التقييم</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for w in workers_perf %}
+            <tr>
+                <td><strong>{{ w.name }}</strong></td>
+                <td>{{ w.profession_name }}</td>
+                <td>{{ w.std_count }}</td>
+                <td>{{ w.vip_count }}</td>
+                <td>⭐ {{ w.rating }} <span style="color: #666; font-size: 0.9em;">({{ w.review_count }} مراجعة)</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align: center;">لا يوجد بيانات لهذا الشهر</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        تم استخراج هذا التقرير تلقائياً من منصة Pro Mihna بتاريخ {{ range(1, 1000)|random }}
+    </div>
+
+    <script>
+        // Auto trigger print dialogue when page loads
+        window.onload = function() {
+            setTimeout(function() { window.print(); }, 500);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="glass" style="max-width: 600px; margin: 2rem auto; padding: 2rem;">
+    <h2 style="text-align: center;">{{ t('register_title') }}</h2>
+    <form action="{{ url_for('register') }}" method="POST" enctype="multipart/form-data">
+        <div class="form-group"><label>{{ t('name') }}:</label><input type="text" name="name" required></div>
+        <div class="form-group"><label>{{ t('email') }}:</label><input type="email" name="email" required></div>
+        <div class="form-group"><label>{{ t('phone') }}:</label><input type="text" name="phone"></div>
+        <div class="form-group">
+            <label>{{ t('location') }}:</label>
+            <select name="location_id" required>
+                {% for l in locations %}<option value="{{ l.id }}">{{ l.name if current_lang == 'ar' else (l.name_fr if current_lang == 'fr' else l.name_en) }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group"><label>{{ t('password') }}:</label><input type="password" name="password" required></div>
+        
+        <!-- Map for location -->
+        <div class="form-group">
+            <label>{{ t('set_location_map') }}:</label>
+            <div id="reg-map" class="map-container"></div>
+            <button type="button" onclick="detectLocation()" class="btn btn-outline btn-sm" style="margin-top: 0.5rem;">{{ t('detect_location') }}</button>
+            <input type="hidden" name="latitude" id="reg-lat" value="32.4912">
+            <input type="hidden" name="longitude" id="reg-lng" value="3.6744">
+        </div>
+        
+        <div class="form-group">
+            <label>{{ t('account_type') }}:</label>
+            <select name="role" id="role_select" onchange="toggleWorkerFields()" required>
+                <option value="customer">{{ t('customer') }}</option>
+                <option value="worker">{{ t('worker') }}</option>
+            </select>
+        </div>
+        
+        <div id="worker_fields" style="display: none; background: var(--primary-light); padding: 1.25rem; border-radius: 12px; margin-bottom: 1.25rem; border: 2px dashed var(--primary);">
+            <h3 style="color: var(--primary); margin-bottom: 1rem;">{{ t('worker_info') }}</h3>
+            <div class="form-group">
+                <label>{{ t('profession') }}:</label>
+                <select name="profession_id">
+                    {% for p in professions %}<option value="{{ p.id }}">{{ p.name if current_lang == 'ar' else (p.name_fr if current_lang == 'fr' else p.name_en) }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group"><label>{{ t('bio') }}:</label><textarea name="bio" rows="3" placeholder="{{ t('bio_placeholder') }}"></textarea></div>
+            <div class="form-group">
+                <label>{{ t('proof_file') }}:</label>
+                <input type="file" name="proof_file">
+                <small style="color: var(--text-muted);">{{ t('proof_hint') }}</small>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">{{ t('register') }}</button>
+    </form>
+    <p style="text-align: center; margin-top: 1rem;">{{ t('have_account') }} <a href="{{ url_for('login') }}">{{ t('login') }}</a></p>
+</div>
+
+<script>
+function toggleWorkerFields() {
+    document.getElementById('worker_fields').style.display = document.getElementById('role_select').value === 'worker' ? 'block' : 'none';
+}
+
+var regMap, regMarker;
+document.addEventListener('DOMContentLoaded', function() {
+    regMap = L.map('reg-map').setView([32.4912, 3.6744], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OpenStreetMap'}).addTo(regMap);
+    regMarker = L.marker([32.4912, 3.6744], {draggable: true}).addTo(regMap);
+    regMarker.on('dragend', function(e) {
+        var ll = e.target.getLatLng();
+        document.getElementById('reg-lat').value = ll.lat;
+        document.getElementById('reg-lng').value = ll.lng;
+    });
+    regMap.on('click', function(e) {
+        regMarker.setLatLng(e.latlng);
+        document.getElementById('reg-lat').value = e.latlng.lat;
+        document.getElementById('reg-lng').value = e.latlng.lng;
+    });
+});
+
+function detectLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            var lat = pos.coords.latitude, lng = pos.coords.longitude;
+            regMap.setView([lat, lng], 15);
+            regMarker.setLatLng([lat, lng]);
+            document.getElementById('reg-lat').value = lat;
+            document.getElementById('reg-lng').value = lng;
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "layout.html" %}
+{% block content %}
+<a href="{{ url_for('search_workers') }}" class="btn btn-outline btn-sm" style="margin-bottom: 1rem;">{{ t('back') }}</a>
+
+<div class="grid" style="grid-template-columns: 1fr 350px;">
+    <!-- Main Info -->
+    <div>
+        <div class="card glass">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: 700;">{{ w.name[0] }}</div>
+                <div>
+                    <h1 style="margin: 0;">{{ w.name }}</h1>
+                    <p style="margin: 0; color: var(--primary); font-weight: 600;">{{ w.profession_name if current_lang == 'ar' else (w.profession_name_fr if current_lang == 'fr' else w.profession_name_en) }}</p>
+                </div>
+            </div>
+            <p><strong>{{ t('location') }}:</strong> {{ w.location_name if current_lang == 'ar' else (w.location_name_fr if current_lang == 'fr' else w.location_name_en) }}</p>
+            <p><strong>{{ t('phone') }}:</strong> <span dir="ltr" style="color: var(--secondary); font-weight: bold;">{{ w.phone }}</span></p>
+            <p><strong>{{ t('rating') }}:</strong> <span class="stars">{% for i in range(5) %}<span class="star {{ 'filled' if i < w.rating|int }}">★</span>{% endfor %}</span> ({{ w.review_count }} {{ t('reviews') }})</p>
+            <div style="padding: 1rem; background: rgba(0,0,0,0.02); border-radius: 8px; margin-top: 0.5rem;">
+                <strong>{{ t('bio') }}:</strong><p>{{ w.bio or '-' }}</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <a href="{{ url_for('book_worker', worker_profile_id=w.id) }}" class="btn btn-secondary">{{ t('book_appointment') }} 📅</a>
+            </div>
+        </div>
+
+        <!-- Portfolio -->
+        <div class="card glass" style="margin-top: 1.5rem;">
+            <h2>{{ t('portfolio') }}</h2>
+            <div class="gallery">
+                {% for item in portfolio %}
+                <div class="gallery-item" onclick="openLightbox('{{ url_for('static', filename='uploads/' + item.image_path) }}')">
+                    <img src="{{ url_for('static', filename='uploads/' + item.image_path) }}" alt="{{ item.caption }}">
+                    {% if item.caption %}<div class="caption">{{ item.caption }}</div>{% endif %}
+                </div>
+                {% else %}<p>{{ t('no_portfolio') }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <!-- Reviews -->
+        <div class="card glass" style="margin-top: 1.5rem;">
+            <h2>{{ t('all_reviews') }} ({{ reviews|length }})</h2>
+            {% for r in reviews %}
+            <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>{{ r.reviewer_name }}</strong>
+                    <span class="stars">{% for i in range(5) %}<span class="star {{ 'filled' if i < r.rating }}">★</span>{% endfor %}</span>
+                </div>
+                <p style="margin: 0.5rem 0 0;">{{ r.comment }}</p>
+                <small style="color: var(--text-muted);">{{ r.created_at[:10] }}</small>
+            </div>
+            {% else %}<p>{{ t('no_reviews') }}</p>{% endfor %}
+
+            {% if session.get('user_role') == 'customer' %}
+            <div style="margin-top: 1.5rem; padding: 1rem; background: var(--primary-light); border-radius: 8px;">
+                <h3>{{ t('leave_review') }}</h3>
+                <form action="{{ url_for('leave_review', worker_profile_id=w.id) }}" method="POST">
+                    <div style="display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap; margin-top: 0.5rem;">
+                        <select name="rating" style="width: 80px;"><option value="5">⭐5</option><option value="4">⭐4</option><option value="3">⭐3</option><option value="2">⭐2</option><option value="1">⭐1</option></select>
+                        <input type="text" name="comment" placeholder="{{ t('review_placeholder') }}" style="flex: 1;" required>
+                        <button type="submit" class="btn btn-secondary btn-sm">{{ t('send') }}</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+        <!-- Map -->
+        <div class="card glass">
+            <h3>{{ t('coverage_area') }}</h3>
+            <div id="profile-map" class="map-container"></div>
+        </div>
+        <!-- Availability -->
+        <div class="card glass" style="margin-top: 1rem;">
+            <h3>{{ t('my_availability') }}</h3>
+            {% set days_list = t('days') %}
+            <div class="avail-grid">
+                {% for a in availability %}
+                <div class="avail-chip">{{ days_list[a.day_of_week] }} {{ a.start_time }}-{{ a.end_time }}</div>
+                {% else %}<p>{{ t('no_availability') }}</p>{% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt=""></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var map = L.map('profile-map').setView([{{ w.latitude }}, {{ w.longitude }}], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OpenStreetMap'}).addTo(map);
+    L.marker([{{ w.latitude }}, {{ w.longitude }}]).addTo(map).bindPopup('<strong>{{ w.name }}</strong>').openPopup();
+    L.circle([{{ w.latitude }}, {{ w.longitude }}], {radius: 1500, color: '#4F46E5', fillOpacity: 0.1}).addTo(map);
+});
+function openLightbox(src) { document.getElementById('lightbox').classList.add('active'); document.getElementById('lightbox-img').src = src; }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+</script>
+{% endblock %}

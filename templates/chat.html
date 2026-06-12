@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="card glass" style="max-width: 800px; margin: 0 auto;">
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+        <a href="{{ request.referrer or url_for('search_workers') }}" class="btn btn-outline btn-sm">{{ t('back') }}</a>
+        <h2 style="margin: 0;">{{ t('chat_title') }} {{ other.name }}</h2>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            {% if messages %}
+                {% for m in messages %}
+                <div class="chat-msg {{ 'mine' if m.sender_id == session.get('user_id') else 'other' }}">
+                    <div>{{ m.content }}</div>
+                    <div class="msg-meta">{{ m.sender_name }} — {{ m.created_at[11:16] }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; color: var(--text-muted); padding: 2rem;">{{ t('no_messages') }}</div>
+            {% endif %}
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="msgInput" placeholder="{{ t('type_message') }}" onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="btn btn-primary" onclick="sendMessage()">{{ t('send_message') }}</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var convId = {{ conv.id }};
+var myId = {{ session.get('user_id') }};
+
+function sendMessage() {
+    var input = document.getElementById('msgInput');
+    var content = input.value.trim();
+    if (!content) return;
+    input.value = '';
+    
+    fetch('/api/chat/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({conversation_id: convId, content: content})
+    }).then(function() { refreshMessages(); });
+}
+
+function refreshMessages() {
+    fetch('/api/chat/messages/' + convId)
+    .then(function(r) { return r.json(); })
+    .then(function(messages) {
+        var container = document.getElementById('chatMessages');
+        container.innerHTML = '';
+        messages.forEach(function(m) {
+            var div = document.createElement('div');
+            div.className = 'chat-msg ' + (m.is_mine ? 'mine' : 'other');
+            div.innerHTML = '<div>' + m.content + '</div><div class="msg-meta">' + m.sender_name + ' — ' + (m.created_at || '').substring(11,16) + '</div>';
+            container.appendChild(div);
+        });
+        container.scrollTop = container.scrollHeight;
+    });
+}
+
+// Scroll to bottom on load
+document.addEventListener('DOMContentLoaded', function() {
+    var c = document.getElementById('chatMessages');
+    c.scrollTop = c.scrollHeight;
+});
+
+// Auto-refresh every 3 seconds
+setInterval(refreshMessages, 3000);
+</script>
+{% endblock %}
