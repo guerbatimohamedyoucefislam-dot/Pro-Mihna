@@ -105,6 +105,61 @@ def get_location_name(loc, lang='ar'):
     if lang == 'en': return loc['name_en'] or loc['name']
     return loc['name']
 
+def check_and_assign_expired_vip_requests():
+    expired_reqs = query_db("""
+        SELECT * FROM vip_requests 
+        WHERE status = 'pending' AND created_at < NOW() - INTERVAL '2 hours'
+    """)
+    if not expired_reqs: return
+    
+    for req in expired_reqs:
+        best_worker = query_db("""
+            SELECT wp.id, u.id as user_id
+            FROM worker_profiles wp
+            JOIN users u ON wp.user_id = u.id
+            WHERE wp.profession_id = ? 
+              AND u.location_id = ?
+              AND wp.is_vip_approved = TRUE 
+              AND wp.status = 'active'
+            ORDER BY wp.rating DESC, wp.review_count DESC
+            LIMIT 1
+        """, [req['profession_id'], req['location_id']], one=True)
+        
+        if best_worker:
+            query_db("UPDATE vip_requests SET assigned_worker_id = ?, status = 'assigned' WHERE id = ?", 
+                     [best_worker['id'], req['id']])
+            query_db("INSERT INTO notifications (user_id, title, message, link) VALUES (?, ?, ?, ?)",
+                     [best_worker['user_id'], 'طلب VIP جديد', 'تم تعيينك تلقائياً لطلب VIP جديد لتميزك وتقييمك العالي.', '/worker_dashboard'])
+            query_db("INSERT INTO notifications (user_id, title, message, link) VALUES (?, ?, ?, ?)",
+                     [req['customer_id'], 'تم تعيين عامل لطلبك', 'تم تعيين أفضل عامل VIP في منطقتك لطلبك بنجاح.', '/customer_dashboard'])
+        else:
+            query_db("UPDATE vip_requests SET status = 'cancelled' WHERE id = ?", [req['id']])
+            apology_msg = 'نعتذر بشدة، لم نتمكن من توفير عامل VIP متاح في تخصصك ومنطقتك حالياً. يمكنك إعادة المحاولة لاحقاً أو تجربة طلب خدمة عادية مجانية. نتمنى تفهمك!'
+            query_db("INSERT INTO notifications (user_id, title, message, link) VALUES (?, ?, ?, ?)",
+                     [req['customer_id'], 'اعتذار عن عدم توفر عامل VIP', apology_msg, '/customer_dashboard'])
+
+@app.before_request
+def auto_assign_hook():
+    from flask import request
+    if request.endpoint and request.endpoint != 'static':
+        try:
+            check_and_assign_expired_vip_requests()
+        except Exception as e:
+            print('Error in auto_assign:', e)
+
+@app.route('/submit_feedback', methods=['POST'])
+@login_required
+def submit_feedback():
+    if session.get('user_role') != 'customer':
+        return "Unauthorized", 401
+    subject = request.form.get('subject', 'بدون عنوان')
+    message = request.form.get('message', '').strip()
+    if message:
+        query_db("INSERT INTO platform_feedback (customer_id, subject, message) VALUES (?, ?, ?)",
+                 [session['user_id'], subject, message])
+        flash('تم إرسال ملاحظاتك للإدارة بنجاح، شكراً لتواصلك!', 'success')
+    return redirect(url_for('customer_dashboard'))
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -752,12 +807,14 @@ SELECT wp.id, u.name, u.email, u.phone, p.name as profession_name, l.name as loc
     if role_filter == '' or role_filter.startswith('worker'):
         all_workers = query_db(work_query, work_params)
     
+    feedbacks = query_db("SELECT f.*, u.name as customer_name FROM platform_feedback f JOIN users u ON f.customer_id = u.id ORDER BY f.created_at DESC")
+    
     return render_template('admin_dashboard.html', stats=stats, vip_requests=vip_requests,
                            vip_applications=vip_applications, vip_workers=vip_workers,
                            pending_workers=pending_workers, monthly_stats=monthly_stats,
                            chart_data=json.dumps(chart_data), all_customers=all_customers,
-                           all_workers=all_workers, all_std_requests=all_std_requests,
-                           all_bookings=all_bookings, professions=professions)
+                           all_workers=all_workers, all_std_requests=all_std_requests, 
+                           all_bookings=all_bookings, professions=professions, feedbacks=feedbacks)
 
 @app.route('/vip_request', methods=['GET', 'POST'])
 @login_required

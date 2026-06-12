@@ -74,10 +74,11 @@
     <aside class="admin-sidebar shadow-lg">
         <h3 style="margin-bottom: 1.5rem; color: var(--text-main); font-weight: 800; text-align: center;">لوحة القيادة</h3>
         
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; padding-right: 1rem;">عام</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin: 1.5rem 0 0.5rem 0; padding-right: 1rem;">عام 📊</div>
         <ul class="admin-menu">
             <li><button class="active" onclick="openAdminTab(event, 'stats')">📊 نظرة عامة</button></li>
-            <li><button onclick="openAdminTab(event, 'all-users')">👥 إدارة المستخدمين</button></li>
+            <li><button onclick="openAdminTab(event, 'all-users')">👥 نظام الفلترة (إدارة المسجلين)</button></li>
+            <li><button onclick="openAdminTab(event, 'platform-feedbacks')">📥 صندوق الملاحظات</button></li>
         </ul>
         
         <div style="font-size: 0.8rem; color: var(--text-muted); margin: 1.5rem 0 0.5rem 0; padding-right: 1rem;">عمليات VIP ⭐</div>
@@ -172,6 +173,36 @@
                     {% else %}<tr><td colspan="4" style="text-align:center;">لا توجد نتائج</td></tr>{% endfor %}
                     </tbody>
                 </table></div>
+            </div>
+        </div>
+
+        <!-- 2.5 Platform Feedbacks (NEW) -->
+        <div id="platform-feedbacks" class="admin-tab">
+            <h2 class="section-title">📥 صندوق الملاحظات والشكاوى</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">هنا تظهر رسائل وملاحظات الزبائن الواردة من لوحات التحكم الخاصة بهم.</p>
+            <div class="card glass table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الزبون</th>
+                            <th>العنوان</th>
+                            <th>الملاحظة</th>
+                            <th>التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for f in feedbacks %}
+                        <tr>
+                            <td><strong>{{ f.customer_name }}</strong></td>
+                            <td><span class="badge badge-info">{{ f.subject }}</span></td>
+                            <td style="max-width: 300px; white-space: normal;">{{ f.message }}</td>
+                            <td dir="ltr">{{ f.created_at }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" style="text-align:center; padding: 2rem;">لا توجد ملاحظات أو شكاوى واردة حالياً.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
 

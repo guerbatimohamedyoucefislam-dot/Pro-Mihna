@@ -59,6 +59,7 @@
         <button class="tab-btn active" onclick="openTab(event, 'my-vip')">{{ t('my_vip_requests') if t else 'طلباتي VIP' }}</button>
         <button class="tab-btn" onclick="openTab(event, 'my-std')">{{ t('my_std_requests') if t else 'طلباتي العادية' }}</button>
         <button class="tab-btn" onclick="openTab(event, 'my-bookings')">{{ t('my_bookings') if t else 'حجوزاتي' }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'my-feedback')">📥 صندوق الملاحظات</button>
     </div>
 
     <div id="my-vip" class="tab-content active">
@@ -132,6 +133,27 @@
                 <strong>{{ t('status') }}:</strong> <span class="badge {{ 'badge-success' if b.status == 'confirmed' else 'badge-standard' }}">{{ b.status }}</span>
             </div>
             {% else %}<p>{{ t('no_bookings') }}</p>{% endfor %}
+        </div>
+    </div>
+
+    <!-- My Feedback Tab -->
+    <div id="my-feedback" class="tab-content">
+        <div class="card glass animate__animated animate__fadeInUp">
+            <h2 class="section-title"><i class="fas fa-envelope-open-text"></i> إرسال ملاحظة للإدارة</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">نحن نهتم برأيك! إذا كان لديك أي شكوى، اقتراح، أو ملاحظة حول الخدمة، أرسلها مباشرة وسيقوم فريق الإدارة بمراجعتها.</p>
+            <form action="{{ url_for('submit_feedback') }}" method="POST">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>عنوان الملاحظة</label>
+                    <input type="text" name="subject" class="form-control" placeholder="مثال: اقتراح لتطوير التطبيق" required style="padding: 0.8rem; border-radius: 8px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>التفاصيل</label>
+                    <textarea name="message" class="form-control" rows="4" placeholder="اكتب رسالتك للإدارة هنا..." required style="padding: 0.8rem; border-radius: 8px; resize: vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.8rem; border-radius: 8px; font-weight: bold; font-size: 1.1rem;">
+                    <i class="fas fa-paper-plane"></i> إرسال الملاحظة
+                </button>
+            </form>
         </div>
     </div>
 </div>
