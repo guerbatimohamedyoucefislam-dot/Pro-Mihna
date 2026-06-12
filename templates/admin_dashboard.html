@@ -83,11 +83,13 @@
         <div style="font-size: 0.8rem; color: var(--text-muted); margin: 1.5rem 0 0.5rem 0; padding-right: 1rem;">عمليات VIP ⭐</div>
         <ul class="admin-menu">
             <li><button onclick="openAdminTab(event, 'vip-clients')">⭐ طلبات الزبائن (VIP)</button></li>
+            <li><button onclick="openAdminTab(event, 'vip-workers-list')">⭐ عرض عمال VIP</button></li>
             <li><button onclick="openAdminTab(event, 'vip-workers')">⭐ طلبات ترقية العمال</button></li>
         </ul>
 
         <div style="font-size: 0.8rem; color: var(--text-muted); margin: 1.5rem 0 0.5rem 0; padding-right: 1rem;">عمليات Standard 🛠️</div>
         <ul class="admin-menu">
+            <li><button onclick="openAdminTab(event, 'std-workers-list')">🛠️ عرض العمال العاديين</button></li>
             <li><button onclick="openAdminTab(event, 'pending-workers')">🛠️ توثيق العمال الجدد</button></li>
             <li><button onclick="openAdminTab(event, 'std-requests')">📝 مراقبة الطلبات العادية</button></li>
             <li><button onclick="openAdminTab(event, 'std-bookings')">📅 مراقبة الحجوزات</button></li>
@@ -182,7 +184,7 @@
                     <strong>الزبون:</strong> {{ r.customer_name }} | <strong>الموقع:</strong> {{ r.location_name }}<br>
                     <strong>المهنة المطلوبة:</strong> {{ r.profession_name }}<br>
                     <strong>الوصف:</strong> {{ r.problem_description }}<br>
-                    {% if r.proof_file_path %}<a href="{{ url_for('uploaded_file', filename=r.proof_file_path) }}" target="_blank" class="btn btn-outline btn-sm">ملف مرفق</a><br>{% endif %}
+                    {% if r.proof_file_path %}<a href="{{ url_for('static', filename='uploads/' + r.proof_file_path) }}" target="_blank" class="btn btn-outline btn-sm">ملف مرفق</a><br>{% endif %}
                     <strong>تاريخ الطلب:</strong> <span dir="ltr">{{ r.created_at }}</span><br>
                     <strong>الحالة:</strong> <span class="badge {{ 'badge-vip' if r.status == 'assigned' else 'badge-danger' }}">{{ r.status }}</span><br>
                     
@@ -208,7 +210,36 @@
             </div>
         </div>
 
-        <!-- 4. VIP Workers -->
+        <!-- VIP Workers List (NEW) -->
+        <div id="vip-workers-list" class="admin-tab">
+            <h2 class="section-title">⭐ عرض قائمة عمال VIP</h2>
+            <div class="glass" style="padding: 1rem; margin-bottom: 1.5rem;">
+                <label>تصفية حسب المهنة:</label>
+                <select id="vip-prof-filter" onchange="filterVipWorkers()" style="padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border);">
+                    <option value="">جميع التخصصات</option>
+                    {% for p in professions %}
+                        <option value="{{ p.name }}">{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="card glass table-responsive"><table>
+                <thead><tr><th>الاسم</th><th>المهنة</th><th>الموقع</th><th>الهاتف</th><th>التقييم</th><th>الاعتماد</th></tr></thead>
+                <tbody id="vip-workers-body">
+                {% for w in all_workers if w.is_vip_approved %}
+                <tr data-prof="{{ w.profession_name }}">
+                    <td><strong>{{ w.name }}</strong></td>
+                    <td>{{ w.profession_name }}</td>
+                    <td>{{ w.location_name }}</td>
+                    <td dir="ltr">{{ w.phone }}</td>
+                    <td>⭐ {{ w.rating }}</td>
+                    <td><span class="badge badge-vip">VIP</span></td>
+                </tr>
+                {% else %}<tr><td colspan="6" style="text-align:center;">لا يوجد عمال VIP</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div>
+
+        <!-- 4. VIP Workers (Applications) -->
         <div id="vip-workers" class="admin-tab">
             <h2 class="section-title">⭐ مراجعة طلبات ترقية العمال لـ VIP</h2>
             <div class="card glass">
@@ -228,6 +259,35 @@
             </div>
         </div>
 
+        <!-- Standard Workers List (NEW) -->
+        <div id="std-workers-list" class="admin-tab">
+            <h2 class="section-title">🛠️ عرض العمال العاديين</h2>
+            <div class="glass" style="padding: 1rem; margin-bottom: 1.5rem;">
+                <label>تصفية حسب المهنة:</label>
+                <select id="std-prof-filter" onchange="filterStdWorkers()" style="padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border);">
+                    <option value="">جميع التخصصات</option>
+                    {% for p in professions %}
+                        <option value="{{ p.name }}">{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="card glass table-responsive"><table>
+                <thead><tr><th>الاسم</th><th>المهنة</th><th>الموقع</th><th>الهاتف</th><th>التقييم</th><th>الحالة</th></tr></thead>
+                <tbody id="std-workers-body">
+                {% for w in all_workers if not w.is_vip_approved %}
+                <tr data-prof="{{ w.profession_name }}">
+                    <td><strong>{{ w.name }}</strong></td>
+                    <td>{{ w.profession_name }}</td>
+                    <td>{{ w.location_name }}</td>
+                    <td dir="ltr">{{ w.phone }}</td>
+                    <td>⭐ {{ w.rating }}</td>
+                    <td><span class="badge {{ 'badge-success' if w.status == 'active' else 'badge-standard' }}">{{ w.status }}</span></td>
+                </tr>
+                {% else %}<tr><td colspan="6" style="text-align:center;">لا يوجد عمال عاديين</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div>
+
         <!-- 5. Pending Workers (Standard Docs) -->
         <div id="pending-workers" class="admin-tab">
             <h2 class="section-title">🛠️ توثيق حسابات العمال الجدد</h2>
@@ -238,7 +298,7 @@
                     <strong>المهنة:</strong> {{ w.profession_name }} | <strong>الموقع:</strong> {{ w.location_name }}<br>
                     <strong>النبذة:</strong> {{ w.bio }}<br>
                     {% if w.proof_file_path %}
-                        <a href="{{ url_for('uploaded_file', filename=w.proof_file_path) }}" target="_blank" class="btn btn-outline btn-sm">عرض الإثبات</a>
+                        <a href="{{ url_for('static', filename='uploads/' + w.proof_file_path) }}" target="_blank" class="btn btn-outline btn-sm">عرض الإثبات</a>
                     {% else %}
                         <span style="color: var(--danger);">لا يوجد إثبات</span>
                     {% endif %}
@@ -317,6 +377,24 @@ function openAdminTab(evt, tabId) {
         target.classList.add('active');
     }
     evt.currentTarget.classList.add('active');
+}
+
+function filterVipWorkers() {
+    const prof = document.getElementById('vip-prof-filter').value;
+    const rows = document.querySelectorAll('#vip-workers-body tr');
+    rows.forEach(r => {
+        if (!prof || r.getAttribute('data-prof') === prof) r.style.display = '';
+        else r.style.display = 'none';
+    });
+}
+
+function filterStdWorkers() {
+    const prof = document.getElementById('std-prof-filter').value;
+    const rows = document.querySelectorAll('#std-workers-body tr');
+    rows.forEach(r => {
+        if (!prof || r.getAttribute('data-prof') === prof) r.style.display = '';
+        else r.style.display = 'none';
+    });
 }
 
 // Check URL params for active tab (e.g. from filter form redirect)

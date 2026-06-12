@@ -705,6 +705,10 @@ def admin_dashboard():
     
     q = request.args.get('q', '').strip()
     role_filter = request.args.get('role', '')
+    prof_filter = request.args.get('prof_id', '')
+
+    # Fetch professions for the filter dropdown
+    professions = query_db('SELECT * FROM professions ORDER BY name')
 
     cust_query = """
         SELECT u.id, u.name, u.email, u.phone, l.name as location_name
@@ -718,7 +722,7 @@ def admin_dashboard():
     cust_query += " ORDER BY u.id DESC"
     
     work_query = """
-        SELECT wp.id, u.name, u.email, u.phone, p.name as profession_name, l.name as location_name,
+SELECT wp.id, u.name, u.email, u.phone, p.name as profession_name, l.name as location_name,
         wp.status, wp.rating, wp.is_vip_approved
         FROM worker_profiles wp
         JOIN users u ON wp.user_id = u.id
@@ -734,6 +738,9 @@ def admin_dashboard():
         work_query += " AND wp.is_vip_approved = TRUE"
     elif role_filter == 'worker_std':
         work_query += " AND (wp.is_vip_approved = FALSE OR wp.is_vip_approved IS NULL)"
+    if prof_filter:
+        work_query += " AND wp.profession_id = ?"
+        work_params.append(prof_filter)
     work_query += " ORDER BY wp.id DESC"
 
     all_customers = []
@@ -748,8 +755,9 @@ def admin_dashboard():
     return render_template('admin_dashboard.html', stats=stats, vip_requests=vip_requests,
                            vip_applications=vip_applications, vip_workers=vip_workers,
                            pending_workers=pending_workers, monthly_stats=monthly_stats,
-                           chart_data=json.dumps(chart_data), all_customers=all_customers, 
-                           all_workers=all_workers, all_std_requests=all_std_requests, all_bookings=all_bookings)
+                           chart_data=json.dumps(chart_data), all_customers=all_customers,
+                           all_workers=all_workers, all_std_requests=all_std_requests,
+                           all_bookings=all_bookings, professions=professions)
 
 @app.route('/vip_request', methods=['GET', 'POST'])
 @login_required
