@@ -1,33 +1,28 @@
 {% extends "layout.html" %}
 {% block content %}
 <h1>{{ t('welcome') }} {{ session.get('user_name') }}</h1>
-<a href="{{ url_for('search_workers') }}" class="btn btn-secondary" style="margin-bottom: 1.5rem; display: inline-block;">{{ t('hero_cta_search') }}</a>
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <a href="{{ url_for('search_workers') }}" class="card glass" style="text-align: center; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; border: 2px solid var(--secondary); transition: transform 0.2s;">
+        <span style="font-size: 3rem; margin-bottom: 1rem;">🔍</span>
+        <h2 style="color: var(--secondary); margin: 0;">{{ t('hero_cta_search') if t else 'البحث عن عامل' }}</h2>
+        <p style="color: var(--text-muted); margin-top: 0.5rem;">ابحث عن العمال المتاحين وتصفح ملفاتهم لطلب خدماتهم مباشرة</p>
+    </a>
+    
+    <a href="{{ url_for('create_vip_request') }}" class="card glass" style="text-align: center; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; border: 2px solid var(--primary); transition: transform 0.2s;">
+        <span style="font-size: 3rem; margin-bottom: 1rem;">⭐</span>
+        <h2 style="color: var(--primary); margin: 0;">{{ t('create_vip_request') if t else 'طلب خدمة VIP' }}</h2>
+        <p style="color: var(--text-muted); margin-top: 0.5rem;">اطلب خدمة فورية وسنقوم بتوفير أفضل عامل متاح لك بسرعة</p>
+    </a>
+</div>
 
 <div class="tabs-container">
     <div class="tabs-header">
-        <button class="tab-btn active" onclick="openTab(event, 'create-vip')">{{ t('create_vip_request') }}</button>
-        <button class="tab-btn" onclick="openTab(event, 'my-vip')">{{ t('my_vip_requests') }}</button>
-        <button class="tab-btn" onclick="openTab(event, 'my-std')">{{ t('my_std_requests') }}</button>
-        <button class="tab-btn" onclick="openTab(event, 'my-bookings')">{{ t('my_bookings') }}</button>
+        <button class="tab-btn active" onclick="openTab(event, 'my-vip')">{{ t('my_vip_requests') if t else 'طلباتي VIP' }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'my-std')">{{ t('my_std_requests') if t else 'طلباتي العادية' }}</button>
+        <button class="tab-btn" onclick="openTab(event, 'my-bookings')">{{ t('my_bookings') if t else 'حجوزاتي' }}</button>
     </div>
 
-    <div id="create-vip" class="tab-content active">
-        <div class="card glass" style="border: 2px solid var(--primary);">
-            <h2 style="color: var(--primary);">{{ t('vip_form_title') }}</h2>
-            <p>{{ t('vip_form_subtitle') }}</p>
-            <form action="{{ url_for('create_vip_request') }}" method="POST" enctype="multipart/form-data">
-                <div class="form-group"><label>{{ t('required_profession') }}:</label>
-                    <select name="profession_id" required>{% for p in professions %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></div>
-                <div class="form-group"><label>{{ t('your_location') }}:</label>
-                    <select name="location_id" required>{% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}</select></div>
-                <div class="form-group"><label>{{ t('problem_description') }}:</label><textarea name="problem_description" rows="3" required></textarea></div>
-                <div class="form-group"><label>{{ t('proof_location_file') }}:</label><input type="file" name="proof_file"></div>
-                <button type="submit" class="btn btn-primary">{{ t('send_vip_request') }}</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="my-vip" class="tab-content">
+    <div id="my-vip" class="tab-content active">
         <div class="card glass">
             <h2>{{ t('my_vip_requests') }}</h2>
             {% for r in vip_requests %}

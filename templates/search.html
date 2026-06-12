@@ -1,5 +1,11 @@
 {% extends "layout.html" %}
 {% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="{{ url_for('customer_dashboard') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+        <span>🔙</span> {{ t('back_to_dashboard') if t else 'العودة للوحة التحكم' }}
+    </a>
+</div>
+
 <div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem;">
     <h2>{{ t('search_title') }}</h2>
     <p>{{ t('search_subtitle') }}</p>

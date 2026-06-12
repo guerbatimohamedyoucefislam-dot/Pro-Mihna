@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% block content %}
+<div style="margin-bottom: 1rem;">
+    <a href="{{ url_for('customer_dashboard') }}" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+        <span>🔙</span> {{ t('back_to_dashboard') if t else 'العودة للوحة التحكم' }}
+    </a>
+</div>
+
+<div class="card glass" style="border: 2px solid var(--primary); max-width: 600px; margin: 0 auto;">
+    <h2 style="color: var(--primary);">{{ t('vip_form_title') if t else 'طلب خدمة VIP' }}</h2>
+    <p>{{ t('vip_form_subtitle') if t else 'خدمة مميزة وسريعة من أفضل العمال' }}</p>
+    <form action="{{ url_for('create_vip_request') }}" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>{{ t('required_profession') if t else 'المهنة المطلوبة' }}:</label>
+            <select name="profession_id" required>
+                {% for p in professions %}
+                <option value="{{ p.id }}">{{ p.name if current_lang == 'ar' else (p.name_fr if current_lang == 'fr' else p.name_en) }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('your_location') if t else 'موقعك' }}:</label>
+            <select name="location_id" required>
+                {% for l in locations %}
+                <option value="{{ l.id }}">{{ l.name if current_lang == 'ar' else (l.name_fr if current_lang == 'fr' else l.name_en) }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>{{ t('problem_description') if t else 'وصف المشكلة' }}:</label>
+            <textarea name="problem_description" rows="4" required></textarea>
+        </div>
+        <div class="form-group">
+            <label>{{ t('proof_location_file') if t else 'صورة توضيحية (اختياري)' }}:</label>
+            <input type="file" name="proof_file">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">{{ t('send_vip_request') if t else 'إرسال الطلب' }}</button>
+    </form>
+</div>
+{% endblock %}

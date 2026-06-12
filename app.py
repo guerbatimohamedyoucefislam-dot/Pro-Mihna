@@ -689,10 +689,16 @@ def admin_dashboard():
                            pending_workers=pending_workers, monthly_stats=monthly_stats,
                            chart_data=json.dumps(chart_data), all_customers=all_customers, all_workers=all_workers)
 
-@app.route('/create_vip_request', methods=['POST'])
+@app.route('/vip_request', methods=['GET', 'POST'])
 @login_required
 def create_vip_request():
     if session.get('user_role') != 'customer': return "Unauthorized", 401
+    
+    if request.method == 'GET':
+        professions = query_db('SELECT * FROM professions')
+        locations = query_db('SELECT * FROM locations')
+        return render_template('vip_request_form.html', professions=professions, locations=locations)
+        
     profession_id = request.form.get('profession_id')
     location_id = request.form.get('location_id')
     problem_description = request.form.get('problem_description')
