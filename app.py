@@ -658,6 +658,26 @@ def admin_dashboard():
         JOIN users wu ON wp.user_id = wu.id
         GROUP BY worker_name, month ORDER BY month DESC, count DESC
     ''')
+
+    all_std_requests = query_db('''
+        SELECT sr.*, u.name as customer_name, wu.name as worker_name, p.name as profession_name
+        FROM standard_requests sr
+        JOIN users u ON sr.customer_id = u.id
+        JOIN worker_profiles wp ON sr.worker_id = wp.id
+        JOIN users wu ON wp.user_id = wu.id
+        JOIN professions p ON wp.profession_id = p.id
+        ORDER BY sr.created_at DESC LIMIT 100
+    ''')
+
+    all_bookings = query_db('''
+        SELECT b.*, cu.name as customer_name, wu.name as worker_name, p.name as profession_name
+        FROM bookings b
+        JOIN users cu ON b.customer_id = cu.id
+        JOIN worker_profiles wp ON b.worker_profile_id = wp.id
+        JOIN users wu ON wp.user_id = wu.id
+        JOIN professions p ON wp.profession_id = p.id
+        ORDER BY b.booking_date DESC, b.time_slot DESC LIMIT 100
+    ''')
     
     # Chart data
     monthly_trend = query_db('''
@@ -705,12 +725,14 @@ def admin_dashboard():
         LEFT JOIN professions p ON wp.profession_id = p.id
         LEFT JOIN locations l ON u.location_id = l.id
         ORDER BY u.id DESC
-    ''')
+    """
+    all_workers = query_db(work_query)
     
     return render_template('admin_dashboard.html', stats=stats, vip_requests=vip_requests,
                            vip_applications=vip_applications, vip_workers=vip_workers,
                            pending_workers=pending_workers, monthly_stats=monthly_stats,
-                           chart_data=json.dumps(chart_data), all_customers=all_customers, all_workers=all_workers)
+                           chart_data=json.dumps(chart_data), all_customers=all_customers, 
+                           all_workers=all_workers, all_std_requests=all_std_requests, all_bookings=all_bookings)
 
 @app.route('/vip_request', methods=['GET', 'POST'])
 @login_required
