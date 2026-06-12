@@ -11,8 +11,22 @@
         <button class="tab-btn" onclick="openTab(event, 'all-users')">قائمة المسجلين</button>
     </div>
 
-    <!-- All Users -->
+    <!-- Users -->
     <div id="all-users" class="tab-content">
+        <div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+            <form method="GET" action="{{ url_for('admin_dashboard') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                <input type="text" name="q" placeholder="البحث بالاسم أو رقم الهاتف..." value="{{ request.args.get('q', '') }}" style="flex: 1; min-width: 200px;">
+                <select name="role" style="flex: 1; min-width: 200px;">
+                    <option value="">جميع المسجلين</option>
+                    <option value="customer" {% if request.args.get('role') == 'customer' %}selected{% endif %}>الزبائن فقط</option>
+                    <option value="worker" {% if request.args.get('role') == 'worker' %}selected{% endif %}>العمال فقط (الكل)</option>
+                    <option value="worker_vip" {% if request.args.get('role') == 'worker_vip' %}selected{% endif %}>عمال VIP</option>
+                    <option value="worker_std" {% if request.args.get('role') == 'worker_std' %}selected{% endif %}>عمال عاديين (Standard)</option>
+                </select>
+                <button type="submit" class="btn btn-secondary">تصفية وبحث</button>
+            </form>
+        </div>
+
         <div class="card glass">
             <h2>قائمة العمال (Workers)</h2>
             <div class="table-responsive" style="margin-bottom: 2rem;"><table>

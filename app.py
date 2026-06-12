@@ -683,15 +683,23 @@ def admin_dashboard():
         'prof_counts': [r['demand_count'] for r in prof_demand],
     }
     
-    all_customers = query_db('''
+    q = request.args.get('q', '').strip()
+    role_filter = request.args.get('role', '')
+
+    cust_query = """
         SELECT u.id, u.name, u.email, u.phone, l.name as location_name
         FROM users u LEFT JOIN locations l ON u.location_id = l.id
         WHERE u.role = 'customer'
-        ORDER BY u.id DESC
-    ''')
+    """
+    cust_params = []
+    if q:
+        cust_query += " AND (u.name LIKE ? OR u.phone LIKE ?)"
+        cust_params.extend([f"%{q}%", f"%{q}%"])
+    cust_query += " ORDER BY u.id DESC"
     
-    all_workers = query_db('''
-        SELECT wp.id, u.name, u.email, u.phone, p.name as profession_name, l.name as location_name, wp.status, wp.rating
+    work_query = """
+        SELECT wp.id, u.name, u.email, u.phone, p.name as profession_name, l.name as location_name, 
+        wp.status, wp.rating, wp.is_vip_approved
         FROM worker_profiles wp 
         JOIN users u ON wp.user_id = u.id
         LEFT JOIN professions p ON wp.profession_id = p.id
