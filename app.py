@@ -718,15 +718,32 @@ def admin_dashboard():
     cust_query += " ORDER BY u.id DESC"
     
     work_query = """
-        SELECT wp.id, u.name, u.email, u.phone, p.name as profession_name, l.name as location_name, 
+        SELECT wp.id, u.name, u.email, u.phone, p.name as profession_name, l.name as location_name,
         wp.status, wp.rating, wp.is_vip_approved
-        FROM worker_profiles wp 
+        FROM worker_profiles wp
         JOIN users u ON wp.user_id = u.id
         LEFT JOIN professions p ON wp.profession_id = p.id
         LEFT JOIN locations l ON u.location_id = l.id
-        ORDER BY u.id DESC
+        WHERE 1=1
     """
-    all_workers = query_db(work_query)
+    work_params = []
+    if q:
+        work_query += " AND (u.name LIKE ? OR u.phone LIKE ?)"
+        work_params.extend([f"%{q}%", f"%{q}%"])
+    if role_filter == 'worker_vip':
+        work_query += " AND wp.is_vip_approved = TRUE"
+    elif role_filter == 'worker_std':
+        work_query += " AND (wp.is_vip_approved = FALSE OR wp.is_vip_approved IS NULL)"
+    work_query += " ORDER BY wp.id DESC"
+
+    all_customers = []
+    all_workers = []
+    
+    if role_filter == '' or role_filter == 'customer':
+        all_customers = query_db(cust_query, cust_params)
+        
+    if role_filter == '' or role_filter.startswith('worker'):
+        all_workers = query_db(work_query, work_params)
     
     return render_template('admin_dashboard.html', stats=stats, vip_requests=vip_requests,
                            vip_applications=vip_applications, vip_workers=vip_workers,

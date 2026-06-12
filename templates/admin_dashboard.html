@@ -1,222 +1,358 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>{{ t('welcome') }} {{ session.get('user_name') }}</h1>
 
-<div class="tabs-container">
-    <div class="tabs-header">
-        <button class="tab-btn active" onclick="openTab(event, 'stats')">{{ t('stats_reports') }}</button>
-        <button class="tab-btn" onclick="openTab(event, 'pending-workers')">{{ t('verify_workers') }}</button>
-        <button class="tab-btn" onclick="openTab(event, 'vip-clients')">{{ t('vip_client_requests') }}</button>
-        <button class="tab-btn" onclick="openTab(event, 'vip-workers')">{{ t('vip_worker_requests') }}</button>
-        <button class="tab-btn" onclick="openTab(event, 'all-users')">قائمة المسجلين</button>
-    </div>
+<style>
+    .admin-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 2rem;
+        align-items: start;
+    }
+    .admin-sidebar {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        position: sticky;
+        top: 90px;
+    }
+    .admin-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .admin-menu button {
+        width: 100%;
+        text-align: inherit;
+        padding: 0.75rem 1rem;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        font-family: 'Cairo', sans-serif;
+        font-weight: 600;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .admin-menu button:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    .admin-menu button.active {
+        background: var(--primary);
+        color: white;
+    }
+    .admin-content {
+        min-width: 0; /* Prevent grid blowout */
+    }
+    .section-title {
+        color: var(--primary);
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .admin-tab { display: none; animation: fadeIn 0.4s ease-out; }
+    .admin-tab.active { display: block; }
+    
+    @media (max-width: 768px) {
+        .admin-layout { grid-template-columns: 1fr; }
+        .admin-sidebar { position: static; }
+    }
+</style>
 
-    <!-- Users -->
-    <div id="all-users" class="tab-content">
-        <div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem;">
-            <form method="GET" action="{{ url_for('admin_dashboard') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-                <input type="text" name="q" placeholder="البحث بالاسم أو رقم الهاتف..." value="{{ request.args.get('q', '') }}" style="flex: 1; min-width: 200px;">
-                <select name="role" style="flex: 1; min-width: 200px;">
-                    <option value="">جميع المسجلين</option>
-                    <option value="customer" {% if request.args.get('role') == 'customer' %}selected{% endif %}>الزبائن فقط</option>
-                    <option value="worker" {% if request.args.get('role') == 'worker' %}selected{% endif %}>العمال فقط (الكل)</option>
-                    <option value="worker_vip" {% if request.args.get('role') == 'worker_vip' %}selected{% endif %}>عمال VIP</option>
-                    <option value="worker_std" {% if request.args.get('role') == 'worker_std' %}selected{% endif %}>عمال عاديين (Standard)</option>
-                </select>
-                <button type="submit" class="btn btn-secondary">تصفية وبحث</button>
-            </form>
-        </div>
+<div class="admin-layout">
+    <!-- SIDEBAR -->
+    <aside class="admin-sidebar shadow-lg">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-main); font-weight: 800; text-align: center;">لوحة القيادة</h3>
+        
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; padding-right: 1rem;">عام</div>
+        <ul class="admin-menu">
+            <li><button class="active" onclick="openAdminTab(event, 'stats')">📊 نظرة عامة</button></li>
+            <li><button onclick="openAdminTab(event, 'all-users')">👥 إدارة المستخدمين</button></li>
+        </ul>
+        
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin: 1.5rem 0 0.5rem 0; padding-right: 1rem;">عمليات VIP ⭐</div>
+        <ul class="admin-menu">
+            <li><button onclick="openAdminTab(event, 'vip-clients')">⭐ طلبات الزبائن (VIP)</button></li>
+            <li><button onclick="openAdminTab(event, 'vip-workers')">⭐ طلبات ترقية العمال</button></li>
+        </ul>
 
-        <div class="card glass">
-            <h2>قائمة العمال (Workers)</h2>
-            <div class="table-responsive" style="margin-bottom: 2rem;"><table>
-                <thead><tr><th>الاسم</th><th>المهنة</th><th>الموقع</th><th>الهاتف</th><th>التقييم</th><th>الحالة</th></tr></thead>
-                <tbody>
-                {% for w in all_workers %}
-                <tr>
-                    <td><strong>{{ w.name }}</strong><br>{{ w.email }}</td>
-                    <td>{{ w.profession_name }}</td>
-                    <td>{{ w.location_name }}</td>
-                    <td dir="ltr">{{ w.phone }}</td>
-                    <td>⭐ {{ w.rating }}</td>
-                    <td><span class="badge {{ 'badge-success' if w.status == 'active' else 'badge-standard' }}">{{ w.status }}</span></td>
-                </tr>
-                {% else %}<tr><td colspan="6" style="text-align:center;">لا يوجد عمال</td></tr>{% endfor %}
-                </tbody>
-            </table></div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin: 1.5rem 0 0.5rem 0; padding-right: 1rem;">عمليات Standard 🛠️</div>
+        <ul class="admin-menu">
+            <li><button onclick="openAdminTab(event, 'pending-workers')">🛠️ توثيق العمال الجدد</button></li>
+            <li><button onclick="openAdminTab(event, 'std-requests')">📝 مراقبة الطلبات العادية</button></li>
+            <li><button onclick="openAdminTab(event, 'std-bookings')">📅 مراقبة الحجوزات</button></li>
+        </ul>
+    </aside>
 
-            <h2>قائمة الزبائن (Customers)</h2>
-            <div class="table-responsive"><table>
-                <thead><tr><th>الاسم</th><th>البريد الإلكتروني</th><th>الموقع</th><th>الهاتف</th></tr></thead>
-                <tbody>
-                {% for c in all_customers %}
-                <tr>
-                    <td><strong>{{ c.name }}</strong></td>
-                    <td>{{ c.email }}</td>
-                    <td>{{ c.location_name }}</td>
-                    <td dir="ltr">{{ c.phone }}</td>
-                </tr>
-                {% else %}<tr><td colspan="4" style="text-align:center;">لا يوجد زبائن</td></tr>{% endfor %}
-                </tbody>
-            </table></div>
-        </div>
-    </div>
-
-    <!-- Stats -->
-    <div id="stats" class="tab-content active">
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
-            <a href="{{ url_for('admin_report') }}" class="btn btn-primary" target="_blank">📄 استخراج التقرير الشهري (PDF)</a>
-        </div>
-        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 2rem;">
-            <div class="stat-card glass primary"><h3>{{ t('total_users') }}</h3><div class="stat-value">{{ stats.users }}</div></div>
-            <div class="stat-card glass secondary"><h3>{{ t('total_workers') }}</h3><div class="stat-value">{{ stats.workers }}</div></div>
-            <div class="stat-card glass accent"><h3>{{ t('total_vip_reqs') }}</h3><div class="stat-value">{{ stats.vip }}</div></div>
-            <div class="stat-card glass muted"><h3>{{ t('total_std_reqs') }}</h3><div class="stat-value">{{ stats.std }}</div></div>
-            <div class="stat-card glass primary"><h3>{{ t('total_bookings') }}</h3><div class="stat-value">{{ stats.bookings }}</div></div>
-        </div>
-
-        <!-- Charts -->
-        <div class="grid" style="margin-bottom: 2rem;">
-            <div class="card glass">
-                <h3>{{ t('requests_chart') }}</h3>
-                <div class="chart-container"><canvas id="trendChart"></canvas></div>
+    <!-- CONTENT -->
+    <main class="admin-content">
+        
+        <!-- 1. Stats -->
+        <div id="stats" class="admin-tab active">
+            <h2 class="section-title">📊 نظرة عامة وإحصائيات</h2>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                <a href="{{ url_for('admin_report') }}" class="btn btn-primary" target="_blank">📄 استخراج التقرير (PDF)</a>
             </div>
-            <div class="card glass">
-                <h3>{{ t('professions_chart') }}</h3>
-                <div class="chart-container"><canvas id="profChart"></canvas></div>
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 2rem;">
+                <div class="stat-card glass primary"><h3>إجمالي المستخدمين</h3><div class="stat-value">{{ stats.users }}</div></div>
+                <div class="stat-card glass secondary"><h3>إجمالي العمال</h3><div class="stat-value">{{ stats.workers }}</div></div>
+                <div class="stat-card glass accent"><h3>طلبات VIP</h3><div class="stat-value">{{ stats.vip }}</div></div>
+                <div class="stat-card glass muted"><h3>طلبات Standard</h3><div class="stat-value">{{ stats.std }}</div></div>
+                <div class="stat-card glass primary"><h3>الحجوزات</h3><div class="stat-value">{{ stats.bookings }}</div></div>
             </div>
-        </div>
-
-        <div class="card glass">
-            <h2>{{ t('monthly_performance') }}</h2>
-            <div class="table-responsive"><table>
-                <thead><tr><th>{{ t('worker_name') }}</th><th>{{ t('month') }}</th><th>{{ t('assigned_requests') }}</th></tr></thead>
-                <tbody>
-                {% for s in monthly_stats %}<tr><td>{{ s.worker_name }}</td><td dir="ltr">{{ s.month }}</td><td><span class="badge badge-vip">{{ s.count }}</span></td></tr>
-                {% else %}<tr><td colspan="3" style="text-align:center;">{{ t('no_monthly_stats') }}</td></tr>{% endfor %}
-                </tbody>
-            </table></div>
-        </div>
-    </div>
-
-    <!-- Pending Workers -->
-    <div id="pending-workers" class="tab-content">
-        <div class="card glass">
-            <h2>{{ t('review_new_workers') }}</h2>
-            <p>{{ t('worker_hidden_until_approved') }}</p>
-            <div class="table-responsive" style="margin-top: 1rem;"><table>
-                <thead><tr><th>{{ t('worker_name') }}</th><th>{{ t('profession') }} / {{ t('location') }}</th><th>{{ t('bio') }} / {{ t('proof_file') }}</th><th>{{ t('actions') }}</th></tr></thead>
-                <tbody>
-                {% for wp in pending_workers %}
-                <tr>
-                    <td><strong>{{ wp.name }}</strong><br><span dir="ltr">{{ wp.phone }}</span><br>{{ wp.email }}</td>
-                    <td><strong>{{ wp.profession_name }}</strong><br>{{ wp.location_name }}</td>
-                    <td style="max-width: 250px; font-size: 0.9rem;">{{ wp.bio or '-' }}<br>
-                        {% if wp.proof_file_path %}<a href="{{ url_for('static', filename='uploads/' + wp.proof_file_path) }}" target="_blank" class="badge badge-info">{{ t('proof_file_view') }}</a>{% else %}<span style="color: var(--text-muted);">{{ t('no_proof') }}</span>{% endif %}
-                    </td>
-                    <td>
-                        <form action="{{ url_for('verify_worker', profile_id=wp.profile_id) }}" method="POST" style="display: flex; gap: 0.5rem;">
-                            <button type="submit" name="action" value="approve" class="btn btn-secondary btn-sm">{{ t('activate') }}</button>
-                            <button type="submit" name="action" value="reject" class="btn btn-outline btn-sm">{{ t('reject') }}</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}<tr><td colspan="4" style="text-align:center;">{{ t('no_pending_workers') }}</td></tr>{% endfor %}
-                </tbody>
-            </table></div>
-        </div>
-    </div>
-
-    <!-- VIP Client Requests -->
-    <div id="vip-clients" class="tab-content">
-        <div class="card glass">
-            <h2>{{ t('assign_vip') }}</h2>
-            {% for r in vip_requests %}
-            <div style="border-bottom: 1px solid var(--border); padding: 1rem 0; display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem;">
-                <div>
-                    <strong>{{ r.customer_name }}</strong> — <span style="color: var(--primary);">{{ r.profession_name }}</span><br>
-                    {{ t('location') }}: {{ r.location_name }} | {{ r.problem_description }}<br>
-                    {% if r.proof_file_path %}<a href="{{ url_for('static', filename='uploads/' + r.proof_file_path) }}" target="_blank" style="color: var(--secondary);">{{ t('proof_file_view') }}</a>{% endif %}
+            <div class="grid" style="margin-bottom: 2rem;">
+                <div class="card glass">
+                    <h3>منحنى الطلبات</h3>
+                    <div class="chart-container"><canvas id="trendChart"></canvas></div>
                 </div>
-                <div style="min-width: 250px;">
-                    <span class="badge {{ 'badge-vip' if r.status == 'assigned' else 'badge-standard' }}">{{ r.status }}</span>
-                    {% if r.status in ('pending', 'processing') %}
-                        <form action="{{ url_for('assign_vip_worker', req_id=r.id) }}" method="POST" style="margin-top: 0.5rem;">
-                            <select name="worker_id" required style="margin-bottom: 0.5rem; width: 100%;">
-                                <option value="">{{ t('select_worker') }}</option>
-                                {% for w in vip_workers if w.profession_name == r.profession_name %}<option value="{{ w.id }}">{{ w.name }} ({{ w.location_name }})</option>{% endfor %}
-                            </select>
-                            <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">{{ t('assign_worker') }}</button>
-                        </form>
-                    {% else %}<br><strong>{{ t('assigned_worker') }}:</strong> {{ r.assigned_worker_name }}{% endif %}
+                <div class="card glass">
+                    <h3>المهن المطلوبة</h3>
+                    <div class="chart-container"><canvas id="profChart"></canvas></div>
                 </div>
             </div>
-            {% else %}<p>{{ t('no_vip_client_reqs') }}</p>{% endfor %}
         </div>
-    </div>
 
-    <!-- VIP Worker Apps -->
-    <div id="vip-workers" class="tab-content">
-        <div class="card glass">
-            <h2>{{ t('review_vip_apps') }}</h2>
-            <div class="table-responsive"><table>
-                <thead><tr><th>{{ t('worker_name') }}</th><th>{{ t('profession') }}</th><th>{{ t('date') }}</th><th>{{ t('status') }}</th><th>{{ t('actions') }}</th></tr></thead>
-                <tbody>
-                {% for app in vip_applications %}
-                <tr>
-                    <td>{{ app.worker_name }}</td><td>{{ app.profession_name }}</td>
-                    <td dir="ltr">{{ app.applied_at[:10] }}</td>
-                    <td><span class="badge {{ 'badge-vip' if app.status == 'approved' else 'badge-standard' }}">{{ app.status }}</span></td>
-                    <td>{% if app.status == 'pending' %}
-                        <form action="{{ url_for('process_vip_app', app_id=app.id) }}" method="POST" style="display: flex; gap: 0.5rem;">
-                            <input type="text" name="admin_notes" placeholder="{{ t('notes_placeholder') }}" style="flex: 1;">
-                            <button type="submit" name="status" value="approved" class="btn btn-secondary btn-sm">{{ t('approve') }}</button>
-                            <button type="submit" name="status" value="rejected" class="btn btn-outline btn-sm">{{ t('reject') }}</button>
-                        </form>{% else %}{{ app.admin_notes or '-' }}{% endif %}</td>
-                </tr>
-                {% else %}<tr><td colspan="5" style="text-align:center;">{{ t('no_vip_apps') }}</td></tr>{% endfor %}
-                </tbody>
-            </table></div>
+        <!-- 2. Users -->
+        <div id="all-users" class="admin-tab">
+            <h2 class="section-title">👥 نظام الفلترة وإدارة المسجلين</h2>
+            <div class="glass" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+                <form method="GET" action="{{ url_for('admin_dashboard') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                    <input type="text" name="q" placeholder="البحث بالاسم أو رقم الهاتف..." value="{{ request.args.get('q', '') }}" style="flex: 1; min-width: 200px;">
+                    <select name="role" style="flex: 1; min-width: 200px;">
+                        <option value="">جميع المسجلين</option>
+                        <option value="customer" {% if request.args.get('role') == 'customer' %}selected{% endif %}>الزبائن فقط</option>
+                        <option value="worker" {% if request.args.get('role') == 'worker' %}selected{% endif %}>العمال فقط (الكل)</option>
+                        <option value="worker_vip" {% if request.args.get('role') == 'worker_vip' %}selected{% endif %}>عمال VIP</option>
+                        <option value="worker_std" {% if request.args.get('role') == 'worker_std' %}selected{% endif %}>عمال عاديين (Standard)</option>
+                    </select>
+                    <button type="submit" class="btn btn-secondary">تصفية وبحث</button>
+                </form>
+            </div>
+            <div class="card glass">
+                <h3>قائمة العمال</h3>
+                <div class="table-responsive" style="margin-bottom: 2rem;"><table>
+                    <thead><tr><th>الاسم</th><th>المهنة</th><th>الموقع</th><th>الهاتف</th><th>التقييم</th><th>الحالة</th></tr></thead>
+                    <tbody>
+                    {% for w in all_workers %}
+                    <tr>
+                        <td><strong>{{ w.name }}</strong><br>{{ w.email }}</td>
+                        <td>{{ w.profession_name }}</td>
+                        <td>{{ w.location_name }}</td>
+                        <td dir="ltr">{{ w.phone }}</td>
+                        <td>⭐ {{ w.rating }}</td>
+                        <td><span class="badge {{ 'badge-success' if w.status == 'active' else 'badge-standard' }}">{{ w.status }}</span></td>
+                    </tr>
+                    {% else %}<tr><td colspan="6" style="text-align:center;">لا توجد نتائج</td></tr>{% endfor %}
+                    </tbody>
+                </table></div>
+
+                <h3>قائمة الزبائن</h3>
+                <div class="table-responsive"><table>
+                    <thead><tr><th>الاسم</th><th>البريد الإلكتروني</th><th>الموقع</th><th>الهاتف</th></tr></thead>
+                    <tbody>
+                    {% for c in all_customers %}
+                    <tr>
+                        <td><strong>{{ c.name }}</strong></td>
+                        <td>{{ c.email }}</td>
+                        <td>{{ c.location_name }}</td>
+                        <td dir="ltr">{{ c.phone }}</td>
+                    </tr>
+                    {% else %}<tr><td colspan="4" style="text-align:center;">لا توجد نتائج</td></tr>{% endfor %}
+                    </tbody>
+                </table></div>
+            </div>
         </div>
-    </div>
+
+        <!-- 3. VIP Clients -->
+        <div id="vip-clients" class="admin-tab">
+            <h2 class="section-title">⭐ طلبات الزبائن (VIP)</h2>
+            <div class="card glass">
+                {% for r in vip_requests %}
+                <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                    <strong>الزبون:</strong> {{ r.customer_name }} | <strong>الموقع:</strong> {{ r.location_name }}<br>
+                    <strong>المهنة المطلوبة:</strong> {{ r.profession_name }}<br>
+                    <strong>الوصف:</strong> {{ r.problem_description }}<br>
+                    {% if r.proof_file_path %}<a href="{{ url_for('uploaded_file', filename=r.proof_file_path) }}" target="_blank" class="btn btn-outline btn-sm">ملف مرفق</a><br>{% endif %}
+                    <strong>تاريخ الطلب:</strong> <span dir="ltr">{{ r.created_at }}</span><br>
+                    <strong>الحالة:</strong> <span class="badge {{ 'badge-vip' if r.status == 'assigned' else 'badge-danger' }}">{{ r.status }}</span><br>
+                    
+                    {% if r.status == 'pending' %}
+                    <form action="{{ url_for('assign_vip_worker', req_id=r.id) }}" method="POST" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <select name="worker_id" required>
+                            <option value="">-- اختر عامل VIP --</option>
+                            {% for w in vip_workers if w.profession_name == r.profession_name and w.location_name == r.location_name %}
+                                <option value="{{ w.id }}">{{ w.name }} (⭐VIP)</option>
+                            {% else %}
+                                {% for w in vip_workers if w.profession_name == r.profession_name %}
+                                    <option value="{{ w.id }}">{{ w.name }} (⭐VIP - {{ w.location_name }})</option>
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm">تعيين العامل</button>
+                    </form>
+                    {% else %}
+                    <strong style="color: var(--primary);">المُنفّذ:</strong> {{ r.assigned_worker_name }}
+                    {% endif %}
+                </div>
+                {% else %}<p>لا توجد طلبات VIP حالياً.</p>{% endfor %}
+            </div>
+        </div>
+
+        <!-- 4. VIP Workers -->
+        <div id="vip-workers" class="admin-tab">
+            <h2 class="section-title">⭐ مراجعة طلبات ترقية العمال لـ VIP</h2>
+            <div class="card glass">
+                {% for a in vip_applications %}
+                <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                    <strong>العامل:</strong> {{ a.worker_name }} ({{ a.profession_name }})<br>
+                    <strong>الرسالة:</strong> {{ a.message }}<br>
+                    <strong>الحالة:</strong> <span class="badge {{ 'badge-success' if a.status == 'approved' else ('badge-danger' if a.status == 'rejected' else 'badge-standard') }}">{{ a.status }}</span><br>
+                    {% if a.status == 'pending' %}
+                    <form action="{{ url_for('process_vip_app', app_id=a.id) }}" method="POST" style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                        <button type="submit" name="action" value="approve" class="btn btn-primary btn-sm">قبول</button>
+                        <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">رفض</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% else %}<p>لا توجد طلبات انضمام VIP معلقة.</p>{% endfor %}
+            </div>
+        </div>
+
+        <!-- 5. Pending Workers (Standard Docs) -->
+        <div id="pending-workers" class="admin-tab">
+            <h2 class="section-title">🛠️ توثيق حسابات العمال الجدد</h2>
+            <div class="card glass">
+                {% for w in pending_workers %}
+                <div style="border-bottom: 1px solid var(--border); padding: 1rem 0;">
+                    <strong>الاسم:</strong> {{ w.name }} | <strong>الهاتف:</strong> <span dir="ltr">{{ w.phone }}</span><br>
+                    <strong>المهنة:</strong> {{ w.profession_name }} | <strong>الموقع:</strong> {{ w.location_name }}<br>
+                    <strong>النبذة:</strong> {{ w.bio }}<br>
+                    {% if w.proof_file_path %}
+                        <a href="{{ url_for('uploaded_file', filename=w.proof_file_path) }}" target="_blank" class="btn btn-outline btn-sm">عرض الإثبات</a>
+                    {% else %}
+                        <span style="color: var(--danger);">لا يوجد إثبات</span>
+                    {% endif %}
+                    
+                    <form action="{{ url_for('verify_worker', profile_id=w.profile_id) }}" method="POST" style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                        <button type="submit" name="action" value="approve" class="btn btn-primary btn-sm">توثيق وقبول</button>
+                        <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">رفض وحذف</button>
+                    </form>
+                </div>
+                {% else %}<p>لا يوجد عمال قيد الانتظار.</p>{% endfor %}
+            </div>
+        </div>
+
+        <!-- 6. Standard Requests Monitoring -->
+        <div id="std-requests" class="admin-tab">
+            <h2 class="section-title">📝 مراقبة الطلبات العادية</h2>
+            <div class="card glass">
+                <div class="table-responsive"><table>
+                    <thead><tr><th>التاريخ</th><th>الزبون</th><th>العامل</th><th>المهنة</th><th>الوصف</th><th>الحالة</th></tr></thead>
+                    <tbody>
+                    {% for r in all_std_requests %}
+                    <tr>
+                        <td dir="ltr" style="font-size: 0.85rem;">{{ r.created_at[:16] }}</td>
+                        <td>{{ r.customer_name }}</td>
+                        <td>{{ r.worker_name }}</td>
+                        <td>{{ r.profession_name }}</td>
+                        <td>{{ r.description[:40] }}...</td>
+                        <td><span class="badge {{ 'badge-success' if r.status == 'accepted' else 'badge-standard' }}">{{ r.status }}</span></td>
+                    </tr>
+                    {% else %}<tr><td colspan="6" style="text-align:center;">لا توجد طلبات</td></tr>{% endfor %}
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+
+        <!-- 7. Standard Bookings Monitoring -->
+        <div id="std-bookings" class="admin-tab">
+            <h2 class="section-title">📅 مراقبة الحجوزات المجدولة</h2>
+            <div class="card glass">
+                <div class="table-responsive"><table>
+                    <thead><tr><th>الزبون</th><th>العامل</th><th>المهنة</th><th>تاريخ الحجز</th><th>الوقت</th><th>الحالة</th></tr></thead>
+                    <tbody>
+                    {% for b in all_bookings %}
+                    <tr>
+                        <td>{{ b.customer_name }}</td>
+                        <td>{{ b.worker_name }}</td>
+                        <td>{{ b.profession_name }}</td>
+                        <td dir="ltr">{{ b.booking_date }}</td>
+                        <td dir="ltr">{{ b.time_slot }}</td>
+                        <td><span class="badge {{ 'badge-success' if b.status == 'confirmed' else 'badge-standard' }}">{{ b.status }}</span></td>
+                    </tr>
+                    {% else %}<tr><td colspan="6" style="text-align:center;">لا توجد حجوزات</td></tr>{% endfor %}
+                    </tbody>
+                </table></div>
+            </div>
+        </div>
+
+    </main>
 </div>
 
+<!-- Chart.js Init -->
 <script>
-function openTab(evt, tabName) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabName).classList.add('active');
+function openAdminTab(evt, tabId) {
+    const tabs = document.querySelectorAll('.admin-tab');
+    tabs.forEach(t => {
+        t.classList.remove('active');
+        t.style.display = 'none';
+    });
+    
+    const btns = document.querySelectorAll('.admin-menu button');
+    btns.forEach(b => b.classList.remove('active'));
+    
+    const target = document.getElementById(tabId);
+    if(target) {
+        target.style.display = 'block';
+        target.classList.add('active');
+    }
     evt.currentTarget.classList.add('active');
 }
 
-// Charts
-document.addEventListener('DOMContentLoaded', function() {
-    var chartData = {{ chart_data|safe }};
-    
-    // Trend Chart
-    new Chart(document.getElementById('trendChart'), {
-        type: 'line',
-        data: {
-            labels: chartData.months.length > 0 ? chartData.months : chartData.std_months,
-            datasets: [
-                { label: 'VIP', data: chartData.vip_counts, borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4 },
-                { label: 'Standard', data: chartData.std_counts, borderColor: '#4F46E5', backgroundColor: 'rgba(79,70,229,0.1)', fill: true, tension: 0.4 }
-            ]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
-    });
-    
-    // Profession Chart
-    if (chartData.prof_names.length > 0) {
+// Check URL params for active tab (e.g. from filter form redirect)
+window.addEventListener('DOMContentLoaded', () => {
+    if (window.location.search.includes('q=') || window.location.search.includes('role=')) {
+        // Find the button for all-users and click it
+        const btn = Array.from(document.querySelectorAll('.admin-menu button')).find(b => b.getAttribute('onclick').includes('all-users'));
+        if(btn) btn.click();
+    }
+});
+
+const chartDataRaw = '{{ chart_data|safe }}';
+if (chartDataRaw) {
+    const data = JSON.parse(chartDataRaw);
+    if (document.getElementById('trendChart')) {
+        new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: data.months,
+                datasets: [
+                    { label: 'طلبات VIP', data: data.vip_counts, borderColor: '#4F46E5', tension: 0.3 },
+                    { label: 'طلبات عادية', data: data.std_counts, borderColor: '#10B981', tension: 0.3 }
+                ]
+            }
+        });
+    }
+    if (document.getElementById('profChart')) {
         new Chart(document.getElementById('profChart'), {
             type: 'doughnut',
             data: {
-                labels: chartData.prof_names,
-                datasets: [{ data: chartData.prof_counts, backgroundColor: ['#4F46E5','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4'] }]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                labels: data.prof_names,
+                datasets: [{ data: data.prof_counts, backgroundColor: ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'] }]
+            }
         });
     }
-});
+}
 </script>
+
 {% endblock %}
